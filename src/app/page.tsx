@@ -25,6 +25,9 @@ import { ThemeSelector } from "@/components/ThemeSelector";
 import { LocationForm } from "@/components/LocationForm";
 import { WeatherCard } from "@/components/WeatherCard";
 import { WeatherSkeleton } from "@/components/WeatherSkeleton";
+import { WeatherEffects } from "@/components/WeatherEffects";
+import { CityComparisonModal } from "@/components/CityComparisonModal";
+import { TimeCapsuleModal } from "@/components/TimeCapsuleModal";
 import { CloudSunRain, AlertCircle, Info, Sparkles } from "lucide-react";
 
 const HISTORICO_LOCALSTORAGE_KEY = "climabr_cidades_recentes";
@@ -52,6 +55,11 @@ function WeatherAppContent() {
   const [loadingClima, setLoadingClima] = useState<boolean>(false);
   const [loadingGPS, setLoadingGPS] = useState<boolean>(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  // Modal de Batalha / Comparação de Cidades
+  const [isComparadorAberto, setIsComparadorAberto] = useState<boolean>(false);
+  // Modal de Cápsula do Tempo
+  const [isCapsulaAberta, setIsCapsulaAberta] = useState<boolean>(false);
 
   // Estado do resultado do clima
   const [dadosClima, setDadosClima] = useState<DadosClimaCidade | null>(null);
@@ -332,8 +340,14 @@ function WeatherAppContent() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col justify-between p-4 sm:p-6 lg:p-10 transition-colors duration-500">
-      <div className="max-w-4xl w-full mx-auto space-y-8">
+    <main className="relative min-h-screen flex flex-col justify-between p-4 sm:p-6 lg:p-10 transition-colors duration-500 overflow-x-hidden">
+      {/* 🌧️ Efeitos Climáticos Sutis de Fundo (Chuva, Estrelas, Sol) */}
+      <WeatherEffects
+        weatherCode={dadosClima?.clima?.weathercode}
+        isDay={dadosClima?.clima?.is_day}
+      />
+
+      <div className="relative z-10 max-w-4xl w-full mx-auto space-y-8">
         {/* Barra Superior: Seletor de Temas */}
         <div className="flex justify-end pt-2">
           <ThemeSelector
@@ -411,7 +425,11 @@ function WeatherAppContent() {
           {loadingClima ? (
             <WeatherSkeleton />
           ) : dadosClima ? (
-            <WeatherCard data={dadosClima} />
+            <WeatherCard
+              data={dadosClima}
+              onAbrirComparador={() => setIsComparadorAberto(true)}
+              onAbrirCapsula={() => setIsCapsulaAberta(true)}
+            />
           ) : (
             <div
               style={{
@@ -434,6 +452,25 @@ function WeatherAppContent() {
           )}
         </section>
       </div>
+
+      {/* Modal de Batalha / Comparação de Cidades */}
+      {dadosClima && (
+        <CityComparisonModal
+          cidadePrincipal={dadosClima}
+          estados={estados}
+          isOpen={isComparadorAberto}
+          onClose={() => setIsComparadorAberto(false)}
+        />
+      )}
+
+      {/* Modal de Cápsula do Tempo do Clima */}
+      {dadosClima && (
+        <TimeCapsuleModal
+          cidade={dadosClima}
+          isOpen={isCapsulaAberta}
+          onClose={() => setIsCapsulaAberta(false)}
+        />
+      )}
 
       {/* Rodapé Informativo */}
       <footer

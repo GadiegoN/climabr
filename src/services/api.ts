@@ -303,3 +303,48 @@ export async function reverseGeocodeGPS(
     return null;
   }
 }
+
+
+/**
+ * 10. Consulta o clima histórico de uma data específica no passado via Open-Meteo Archive API.
+ */
+export async function getClimaHistorico(
+  latitude: number,
+  longitude: number,
+  dataIso: string // YYYY-MM-DD
+): Promise<{
+  data: string;
+  tempMax: number;
+  tempMin: number;
+  precipitacao: number;
+  ventoMax: number;
+  codigoClima: number;
+} | null> {
+  try {
+    const params = new URLSearchParams({
+      latitude: latitude.toFixed(6),
+      longitude: longitude.toFixed(6),
+      start_date: dataIso,
+      end_date: dataIso,
+      daily: "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,weather_code",
+      timezone: "auto",
+    });
+
+    const response = await fetch(`https://archive-api.open-meteo.com/v1/archive?${params.toString()}`);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    if (!data.daily || !data.daily.time || data.daily.time.length === 0) return null;
+
+    return {
+      data: data.daily.time[0],
+      tempMax: data.daily.temperature_2m_max?.[0] ?? 0,
+      tempMin: data.daily.temperature_2m_min?.[0] ?? 0,
+      precipitacao: data.daily.precipitation_sum?.[0] ?? 0,
+      ventoMax: data.daily.wind_speed_10m_max?.[0] ?? 0,
+      codigoClima: data.daily.weather_code?.[0] ?? 0,
+    };
+  } catch {
+    return null;
+  }
+}

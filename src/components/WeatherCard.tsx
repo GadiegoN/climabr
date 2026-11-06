@@ -3,6 +3,7 @@ import { DadosClimaCidade } from "@/types/weather";
 import { mapearCodigoClima } from "@/utils/weatherCodes";
 import { WeatherIcon } from "./WeatherIcon";
 import { WeatherChart } from "./WeatherChart";
+import { CityMap } from "./CityMap";
 import {
   MapPin,
   Wind,
@@ -24,13 +25,17 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  Swords,
+  Hourglass,
 } from "lucide-react";
 
 interface WeatherCardProps {
   data: DadosClimaCidade;
+  onAbrirComparador?: () => void;
+  onAbrirCapsula?: () => void;
 }
 
-export function WeatherCard({ data }: WeatherCardProps) {
+export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: WeatherCardProps) {
   const [copiado, setCopiado] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const condicao = mapearCodigoClima(data.clima.weathercode, data.clima.is_day);
@@ -121,28 +126,64 @@ export function WeatherCard({ data }: WeatherCardProps) {
       >
         <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Topo do Card: Localização, Horário e Botão de Compartilhar */}
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/20 pb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <MapPin className="w-6 h-6 text-white drop-shadow-sm flex-shrink-0" />
-              <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight drop-shadow">
-                {data.municipio} - {data.uf}
-              </h2>
+        {/* Topo do Card: Localização e Condição em linha limpa */}
+        <div className="relative z-10 border-b border-white/20 pb-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <MapPin className="w-6 h-6 text-white drop-shadow-sm flex-shrink-0" />
+                <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight drop-shadow whitespace-nowrap">
+                  {data.municipio} - {data.uf}
+                </h2>
+              </div>
+              <p className="text-white/80 text-xs sm:text-sm mt-1 flex items-center gap-1.5 font-medium">
+                <Calendar className="w-4 h-4 opacity-80" />
+                Atualizado em: {dataFormatada}
+              </p>
             </div>
-            <p className="text-white/80 text-sm mt-1 flex items-center gap-1.5 font-medium">
-              <Calendar className="w-4 h-4 opacity-80" />
-              Atualizado em: {dataFormatada}
-            </p>
+
+            {/* Badge da Condição Climática */}
+            <span
+              className={`self-start sm:self-auto px-4 py-1.5 rounded-full text-xs md:text-sm font-semibold tracking-wide shadow-sm backdrop-blur-md whitespace-nowrap ${condicao.badgeCor}`}
+            >
+              {condicao.descricao}
+            </span>
           </div>
 
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          {/* Barra de Ferramentas / Ações Rápidas (Organizada e sem quebrar texto) */}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {/* Botão de Comparação de Cidades */}
+            {onAbrirComparador && (
+              <button
+                type="button"
+                onClick={onAbrirComparador}
+                title="Comparar com outra cidade brasileira"
+                className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-black/20 hover:bg-black/30 backdrop-blur-md border border-white/25 text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm whitespace-nowrap"
+              >
+                <Swords className="w-3.5 h-3.5 text-amber-300" />
+                <span>Comparar</span>
+              </button>
+            )}
+
+            {/* Botão de Cápsula do Tempo */}
+            {onAbrirCapsula && (
+              <button
+                type="button"
+                onClick={onAbrirCapsula}
+                title="Ver o clima histórico desta cidade em anos anteriores"
+                className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-black/20 hover:bg-black/30 backdrop-blur-md border border-white/25 text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm whitespace-nowrap"
+              >
+                <Hourglass className="w-3.5 h-3.5 text-purple-300" />
+                <span>Cápsula do Tempo</span>
+              </button>
+            )}
+
             {/* Botão de Compartilhar Link Direto */}
             <button
               type="button"
               onClick={handleCopiarLink}
               title="Copiar link direto para esta cidade"
-              className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
+              className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-black/20 hover:bg-black/30 backdrop-blur-md border border-white/25 text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm whitespace-nowrap"
             >
               {copiado ? (
                 <>
@@ -156,12 +197,6 @@ export function WeatherCard({ data }: WeatherCardProps) {
                 </>
               )}
             </button>
-
-            <span
-              className={`px-4 py-1.5 rounded-full text-xs md:text-sm font-semibold tracking-wide shadow-sm backdrop-blur-md ${condicao.badgeCor}`}
-            >
-              {condicao.descricao}
-            </span>
           </div>
         </div>
 
@@ -499,6 +534,13 @@ export function WeatherCard({ data }: WeatherCardProps) {
           </div>
         </div>
       )}
+
+      {/* 🗺️ Mini Mapa Interativo da Cidade (OpenStreetMap) */}
+      <CityMap
+        municipio={data.municipio}
+        uf={data.uf}
+        coordenadas={data.coordenadas}
+      />
 
       {/* 📅 Previsão para os Próximos 7 Dias (Open-Meteo) */}
       {data.previsaoDiaria && data.previsaoDiaria.length > 0 && (

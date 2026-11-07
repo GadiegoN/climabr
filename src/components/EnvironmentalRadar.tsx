@@ -7,6 +7,7 @@ import {
   AlertaCEMADEN,
   RiscoFogo,
   QualidadeArDados,
+  DadosElNino,
 } from "@/types/weather";
 import {
   ShieldAlert,
@@ -21,6 +22,11 @@ import {
   Info,
   ChevronRight,
   PhoneCall,
+  Thermometer,
+  CloudRain,
+  TrendingUp,
+  Globe,
+  Compass,
 } from "lucide-react";
 
 interface EnvironmentalRadarProps {
@@ -30,6 +36,7 @@ interface EnvironmentalRadarProps {
   alertasCEMADEN?: AlertaCEMADEN[];
   riscoFogo?: RiscoFogo;
   qualidadeAr?: QualidadeArDados;
+  elNino?: DadosElNino;
 }
 
 export default function EnvironmentalRadar({
@@ -39,8 +46,10 @@ export default function EnvironmentalRadar({
   alertasCEMADEN = [],
   riscoFogo,
   qualidadeAr,
+  elNino,
 }: EnvironmentalRadarProps) {
   const [alertaSelecionado, setAlertaSelecionado] = useState<AlertaINMET | null>(null);
+  const [isElNinoModalAberto, setIsElNinoModalAberto] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -318,6 +327,42 @@ export default function EnvironmentalRadar({
         </div>
       </div>
 
+      {/* 2.5. MONITOR MACROCLIMÁTICO DO OCEANO PACÍFICO (EL NIÑO / LA NIÑA - NOAA) */}
+      {elNino && (
+        <div className="pt-2 border-t border-[var(--card-border)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-black/5 dark:bg-white/[0.02] border border-[var(--card-border)]">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="p-2 rounded-xl bg-sky-500/10 text-sky-400 flex-shrink-0 mt-0.5 sm:mt-0">
+                <Waves className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-[var(--text-main)] flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-sky-400" />
+                    Oceano Pacífico & Macroclima:
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${elNino.badgeClass}`}>
+                    {elNino.fase} {elNino.intensidade !== "Neutro" ? elNino.intensidade : ""} ({elNino.anomaliaAtual > 0 ? "+" : ""}{elNino.anomaliaAtual.toFixed(1)}°C)
+                  </span>
+                </div>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  Tendência para {uf}: <span className="text-[var(--text-main)] font-semibold">{elNino.impactoRegional.titulo}</span>
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsElNinoModalAberto(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto shadow-sm"
+            >
+              <span>Ver Gráficos & Efeitos</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 3. MODAL DE DETALHES DE ALERTA DO INMET (Renderizado no body via Portal para nunca ser bloqueado por stacking context) */}
       {alertaSelecionado && mounted && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
@@ -399,6 +444,166 @@ export default function EnvironmentalRadar({
             >
               Entendido
             </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 4. MODAL DETALHADO DO EL NIÑO / LA NIÑA (NOAA ONI) */}
+      {isElNinoModalAberto && elNino && mounted && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div
+            style={cardStyle}
+            className="w-full max-w-xl rounded-3xl border border-white/20 p-6 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+          >
+            {/* Fechar */}
+            <button
+              type="button"
+              onClick={() => setIsElNinoModalAberto(false)}
+              className="absolute top-5 right-5 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Cabeçalho */}
+            <div className="space-y-1.5 pr-8">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold inline-block ${elNino.badgeClass}`}>
+                  {elNino.fase} {elNino.intensidade !== "Neutro" ? elNino.intensidade : ""}
+                </span>
+                <span className="text-xs text-[var(--text-muted)] font-medium">
+                  Trimestre: {elNino.periodoAtual}
+                </span>
+              </div>
+              <h3 className="text-xl font-bold text-[var(--text-main)] flex items-center gap-2">
+                <Waves className="w-5 h-5 text-sky-400" />
+                Monitoramento ENSO — El Niño & La Niña
+              </h3>
+              <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                {elNino.descricao}
+              </p>
+            </div>
+
+            {/* Termômetro / Barra de Anomalia do Pacífico */}
+            <div className="p-4 rounded-2xl bg-black/5 dark:bg-white/[0.03] border border-[var(--card-border)] space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-[var(--text-muted)]">
+                  Anomalia Térmica do Pacífico Equatorial (Região Niño 3.4):
+                </span>
+                <span className="font-bold text-sm text-[var(--text-main)]">
+                  {elNino.anomaliaAtual > 0 ? "+" : ""}{elNino.anomaliaAtual.toFixed(2)}°C
+                </span>
+              </div>
+
+              {/* Barra de Escala: -3°C (La Niña) a +3°C (El Niño) */}
+              <div className="relative pt-3 pb-1">
+                <div className="w-full h-3 rounded-full bg-gradient-to-r from-blue-500 via-emerald-400 to-rose-500 opacity-80" />
+                {/* Marcador da anomalia atual */}
+                {(() => {
+                  const pct = Math.max(0, Math.min(100, ((elNino.anomaliaAtual + 3) / 6) * 100));
+                  return (
+                    <div
+                      className="absolute top-1 transform -translate-x-1/2 flex flex-col items-center"
+                      style={{ left: `${pct}%` }}
+                    >
+                      <div className="w-4 h-4 rounded-full bg-white border-2 border-slate-900 shadow-md" />
+                    </div>
+                  );
+                })()}
+                <div className="flex justify-between text-[10px] text-[var(--text-muted)] mt-1.5 font-medium">
+                  <span>-3.0°C (La Niña Forte)</span>
+                  <span>0.0°C (Neutro)</span>
+                  <span>+3.0°C (El Niño Forte)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Impactos Regionais em Destaque para a Cidade / UF Atual */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-[var(--text-main)] uppercase tracking-wider flex items-center gap-1.5">
+                <Compass className="w-4 h-4 text-sky-400" />
+                Impactos no Clima de {municipio} ({uf}) — {elNino.impactoRegional.regiao}
+              </h4>
+
+              <div className="p-3.5 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-xs text-[var(--text-main)] leading-relaxed">
+                <p className="font-semibold text-sky-400 mb-1">
+                  {elNino.impactoRegional.titulo}
+                </p>
+                <p className="text-[var(--text-muted)]">
+                  {elNino.impactoRegional.descricao}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="p-3 rounded-xl bg-black/5 dark:bg-white/[0.03] border border-[var(--card-border)] space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-main)]">
+                    <CloudRain className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Efeitos na Chuva:</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                    {elNino.impactoRegional.efeitosChuva}
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-black/5 dark:bg-white/[0.03] border border-[var(--card-border)] space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text-main)]">
+                    <Thermometer className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Efeitos na Temperatura:</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+                    {elNino.impactoRegional.efeitosTemperatura}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Histórico dos Últimos 6 Trimestres (Trajetória do Índice ONI) */}
+            {elNino.historicoRecente && elNino.historicoRecente.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-[var(--card-border)]">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-[var(--text-main)] flex items-center gap-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                    Evolução Recente do Índice ONI (Últimos 6 Trimestres):
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {elNino.historicoRecente.map((ponto, i) => (
+                    <div
+                      key={i}
+                      className="p-2 rounded-xl bg-black/5 dark:bg-white/[0.03] border border-[var(--card-border)] text-center space-y-0.5"
+                    >
+                      <div className="text-[10px] text-[var(--text-muted)]">
+                        {ponto.periodo}
+                      </div>
+                      <div
+                        className={`text-xs font-bold ${
+                          ponto.anomalia >= 0.5
+                            ? "text-rose-500"
+                            : ponto.anomalia <= -0.5
+                            ? "text-blue-500"
+                            : "text-emerald-500"
+                        }`}
+                      >
+                        {ponto.anomalia > 0 ? "+" : ""}{ponto.anomalia.toFixed(2)}°
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Rodapé Científico */}
+            <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] pt-2 border-t border-[var(--card-border)]">
+              <span>Fonte: NOAA Climate Prediction Center (CPC / NCEP)</span>
+              <button
+                type="button"
+                onClick={() => setIsElNinoModalAberto(false)}
+                className="py-1.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-semibold text-xs transition-colors cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
           </div>
         </div>,
         document.body

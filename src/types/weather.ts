@@ -139,6 +139,36 @@ export interface RiscoFogo {
   recomendacao: string;
 }
 
+// Tipagem para Ponto do Índice Oceânico do Niño (ONI / NOAA)
+export interface PontoONI {
+  periodo: string; // Ex: "Ago-Set-Out"
+  ano: number;
+  anomalia: number; // Ex: +2.46
+  total: number;
+}
+
+// Tipagem para Impacto Regional do El Niño / La Niña
+export interface ImpactoRegionalENSO {
+  regiao: string;
+  titulo: string;
+  descricao: string;
+  efeitosChuva: string;
+  efeitosTemperatura: string;
+}
+
+// Tipagem Geral para Monitoramento do El Niño / La Niña (ENSO)
+export interface DadosElNino {
+  fase: "El Niño" | "La Niña" | "Neutro";
+  intensidade: "Fraco" | "Moderado" | "Forte" | "Muito Forte" | "Neutro";
+  anomaliaAtual: number; // Ex: +2.46
+  periodoAtual: string; // Ex: "Ago-Set-Out 2026"
+  descricao: string;
+  corHex: string;
+  badgeClass: string;
+  historicoRecente: PontoONI[];
+  impactoRegional: ImpactoRegionalENSO;
+}
+
 // Histórico de buscas recentes salvas no navegador (LocalStorage)
 export interface CidadeHistorico {
   municipioId: string;
@@ -165,6 +195,7 @@ export interface DadosClimaCidade {
   alertasINMET?: AlertaINMET[];
   alertasCEMADEN?: AlertaCEMADEN[];
   riscoFogo?: RiscoFogo;
+  elNino?: DadosElNino;
 }
 
 // Tipagem para descrição e estilo visual da condição climática

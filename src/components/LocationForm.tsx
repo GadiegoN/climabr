@@ -1,6 +1,6 @@
 import React from "react";
 import { EstadoIBGE, MunicipioIBGE, CidadeHistorico } from "@/types/weather";
-import { Search, Loader2, MapPin, Building2, History, LocateFixed } from "lucide-react";
+import { Search, Loader2, MapPin, Building2, History, LocateFixed, Star, X } from "lucide-react";
 
 interface LocationFormProps {
   estados: EstadoIBGE[];
@@ -12,6 +12,8 @@ interface LocationFormProps {
   loadingClima: boolean;
   loadingGPS: boolean;
   historico: CidadeHistorico[];
+  favoritos?: CidadeHistorico[];
+  onRemoverFavorito?: (id: string) => void;
   onEstadoChange: (uf: string) => void;
   onCidadeChange: (id: string) => void;
   onSelecionarHistorico: (item: CidadeHistorico) => void;
@@ -29,6 +31,8 @@ export function LocationForm({
   loadingClima,
   loadingGPS,
   historico,
+  favoritos = [],
+  onRemoverFavorito,
   onEstadoChange,
   onCidadeChange,
   onSelecionarHistorico,
@@ -171,6 +175,47 @@ export function LocationForm({
           </div>
         </div>
       </div>
+
+      {/* ⭐ Cidades Favoritas (Fixadas pelo Usuário) */}
+      {favoritos.length > 0 && (
+        <div className="pt-1">
+          <p style={{ color: "var(--text-muted)" }} className="text-xs font-semibold flex items-center gap-1.5 mb-2">
+            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+            Cidades Favoritas:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {favoritos.map((item) => (
+              <div
+                key={`fav-${item.municipioId}-${item.uf}`}
+                className="inline-flex items-center rounded-xl border border-amber-500/35 bg-amber-500/10 text-xs shadow-sm overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => onSelecionarHistorico(item)}
+                  disabled={loadingClima || loadingMunicipios || loadingGPS}
+                  className="px-2.5 py-1.5 font-bold text-amber-600 dark:text-amber-300 hover:opacity-80 transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Star className="w-3 h-3 fill-current text-amber-400" />
+                  <span>{item.municipioNome} ({item.uf})</span>
+                </button>
+                {onRemoverFavorito && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoverFavorito(item.municipioId);
+                    }}
+                    title="Remover dos favoritos"
+                    className="pr-2 pl-1 py-1.5 text-amber-500/70 hover:text-rose-500 transition-colors cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Histórico de Cidades Recentes (Salvo no Navegador) */}
       {historico.length > 0 && (

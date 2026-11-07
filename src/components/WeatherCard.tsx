@@ -5,6 +5,9 @@ import { WeatherIcon } from "./WeatherIcon";
 import { WeatherChart } from "./WeatherChart";
 import EnvironmentalRadar from "./EnvironmentalRadar";
 import CityInsightsTabs from "./CityInsightsTabs";
+import { ShareModal } from "./ShareModal";
+import { getFaseDaLua } from "@/utils/astronomy";
+import { gerarDicasPraticas } from "@/utils/dailyTips";
 import {
   MapPin,
   Wind,
@@ -25,18 +28,44 @@ import {
   ChevronRight,
   Swords,
   Hourglass,
+  Star,
+  Sparkles,
+  Moon,
+  Camera,
 } from "lucide-react";
 
 interface WeatherCardProps {
   data: DadosClimaCidade;
+  isFavorito?: boolean;
+  onToggleFavorito?: () => void;
   onAbrirComparador?: () => void;
   onAbrirCapsula?: () => void;
 }
 
-export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: WeatherCardProps) {
-  const [copiado, setCopiado] = useState(false);
+export function WeatherCard({
+  data,
+  isFavorito = false,
+  onToggleFavorito,
+  onAbrirComparador,
+  onAbrirCapsula,
+}: WeatherCardProps) {
+  const [isShareModalAberto, setIsShareModalAberto] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const condicao = mapearCodigoClima(data.clima.weathercode, data.clima.is_day);
+
+  // Dados astronômicos da Lua
+  const faseLua = getFaseDaLua();
+
+  // Dicas práticas do dia e vestimenta inteligente
+  const hojePrevisao = data.previsaoDiaria?.[0];
+  const dicasDoDia = gerarDicasPraticas({
+    tempAtual: data.clima.temperature,
+    tempMin: hojePrevisao ? hojePrevisao.tempMin : data.clima.temperature,
+    tempMax: hojePrevisao ? hojePrevisao.tempMax : data.clima.temperature,
+    probabilidadeChuva: hojePrevisao?.probabilidadeChuva,
+    umidade: data.clima.relative_humidity,
+    uv: data.qualidadeAr?.uvIndex,
+  });
 
   // Formatar horário da medição
   const dataFormatada = new Date(data.clima.time).toLocaleString("pt-BR", {
@@ -45,18 +74,6 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
     hour: "2-digit",
     minute: "2-digit",
   });
-
-  // Função para copiar o link direto da cidade atual
-  const handleCopiarLink = async () => {
-    try {
-      const url = `${window.location.origin}/?uf=${encodeURIComponent(data.uf)}&cidadeId=${encodeURIComponent(data.municipioId)}&cidade=${encodeURIComponent(data.municipio)}`;
-      await navigator.clipboard.writeText(url);
-      setCopiado(true);
-      setTimeout(() => setCopiado(false), 2500);
-    } catch {
-      // Fallback
-    }
-  };
 
   // Scroll suave para a esquerda / direita no carrossel hora a hora
   const rolarCarrossel = (direcao: "esq" | "dir") => {
@@ -114,6 +131,22 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
                 <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight drop-shadow whitespace-nowrap">
                   {data.municipio} - {data.uf}
                 </h2>
+                {onToggleFavorito && (
+                  <button
+                    type="button"
+                    onClick={onToggleFavorito}
+                    title={isFavorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                    className="p-1.5 rounded-full hover:bg-white/20 transition-all cursor-pointer active:scale-90"
+                  >
+                    <Star
+                      className={`w-5 h-5 transition-colors ${
+                        isFavorito
+                          ? "text-amber-300 fill-amber-300 drop-shadow"
+                          : "text-white/60 hover:text-white"
+                      }`}
+                    />
+                  </button>
+                )}
               </div>
               <p className="text-white/80 text-xs sm:text-sm mt-1 flex items-center gap-1.5 font-medium">
                 <Calendar className="w-4 h-4 opacity-80" />
@@ -157,24 +190,15 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
               </button>
             )}
 
-            {/* Botão de Compartilhar Link Direto */}
+            {/* Botão de Compartilhar Link & Baixar PNG */}
             <button
               type="button"
-              onClick={handleCopiarLink}
-              title="Copiar link direto para esta cidade"
+              onClick={() => setIsShareModalAberto(true)}
+              title="Baixar imagem PNG ou compartilhar previsão no WhatsApp"
               className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-black/20 hover:bg-black/30 backdrop-blur-md border border-white/25 text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm whitespace-nowrap"
             >
-              {copiado ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-300" />
-                  <span className="text-emerald-200">Link copiado!</span>
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span>Compartilhar</span>
-                </>
-              )}
+              <Camera className="w-3.5 h-3.5 text-sky-300" />
+              <span>Baixar / Compartilhar</span>
             </button>
           </div>
         </div>
@@ -245,17 +269,27 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
             </span>
           </div>
 
-          {/* Sol (Nascer & Pôr) */}
-          <div className="bg-black/20 backdrop-blur-md p-3.5 rounded-2xl border border-white/10">
-            <div className="flex items-center gap-2 text-white/70 text-xs font-semibold uppercase">
-              <Sun className="w-4 h-4" /> Sol
+          {/* Sol & Lua (Astronomia) */}
+          <div className="bg-black/20 backdrop-blur-md p-3.5 rounded-2xl border border-white/10 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-white/70 text-xs font-semibold uppercase">
+              <span className="flex items-center gap-1.5">
+                <Sun className="w-3.5 h-3.5 text-amber-300" /> Sol & Lua
+              </span>
+              <span className="text-xs" title={faseLua.descricao}>
+                {faseLua.icone}
+              </span>
             </div>
-            <div className="text-xs font-medium text-white mt-1 space-y-0.5">
-              <div className="flex items-center gap-1">
-                <Sunrise className="w-3.5 h-3.5 text-amber-300" /> {data.clima.nascerDoSol || "--:--"}
+            <div className="text-[11px] font-medium text-white mt-1 space-y-0.5">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1 opacity-85">
+                  <Sunrise className="w-3 h-3 text-amber-300" /> {data.clima.nascerDoSol || "--:--"}
+                </span>
+                <span className="flex items-center gap-1 opacity-85">
+                  <Sunset className="w-3 h-3 text-orange-300" /> {data.clima.porDoSol || "--:--"}
+                </span>
               </div>
-              <div className="flex items-center gap-1">
-                <Sunset className="w-3.5 h-3.5 text-orange-300" /> {data.clima.porDoSol || "--:--"}
+              <div className="text-[10px] text-white/90 pt-1 border-t border-white/10 font-bold truncate">
+                {faseLua.nome} ({faseLua.percentualIluminacao}%)
               </div>
             </div>
           </div>
@@ -271,6 +305,38 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
             </p>
           </div>
         </div>
+
+        {/* ✨ Dicas Práticas & O que Vestir Hoje */}
+        {dicasDoDia.length > 0 && (
+          <div className="relative z-10 pt-4 mt-4 border-t border-white/20 space-y-2.5">
+            <div className="flex items-center gap-2 text-xs font-bold text-white">
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>Dicas de Conforto & O que Vestir Hoje:</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {dicasDoDia.map((dica) => (
+                <div
+                  key={dica.id}
+                  className="p-2.5 rounded-xl bg-black/20 backdrop-blur-md border border-white/15 text-white flex items-start gap-2.5"
+                >
+                  <span className="text-base select-none mt-0.5">
+                    {dica.icone === "shirt"
+                      ? "👕"
+                      : dica.icone === "umbrella"
+                      ? "☔"
+                      : dica.icone === "sun"
+                      ? "🧴"
+                      : "💧"}
+                  </span>
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-white text-xs">{dica.titulo}</p>
+                    <p className="text-[11px] text-white/80 leading-relaxed">{dica.mensagem}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ⏰ Previsão Hora a Hora (Próximas 24 horas) com Scroll Aprimorado */}
@@ -415,6 +481,7 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
         alertasCEMADEN={data.alertasCEMADEN}
         riscoFogo={data.riscoFogo}
         qualidadeAr={data.qualidadeAr}
+        elNino={data.elNino}
       />
 
       {/* 📅 Previsão para os Próximos 7 Dias (Open-Meteo) */}
@@ -495,6 +562,13 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
         uf={data.uf}
         wikipedia={data.wikipedia}
         noticiasIBGE={data.noticiasIBGE}
+      />
+
+      {/* 📸 Modal de Compartilhamento Social & WhatsApp */}
+      <ShareModal
+        cidade={data}
+        isOpen={isShareModalAberto}
+        onClose={() => setIsShareModalAberto(false)}
       />
     </div>
   );

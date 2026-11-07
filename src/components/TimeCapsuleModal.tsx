@@ -43,6 +43,19 @@ export function TimeCapsuleModal({
 
     const anoAtual = new Date().getFullYear();
     const mesDia = new Date().toISOString().slice(5, 10); // MM-DD
+    const cacheKey = `climabr_capsula_${cidade.coordenadas.latitude.toFixed(4)}_${cidade.coordenadas.longitude.toFixed(4)}_${mesDia}`;
+
+    // 1. Tenta recuperar do cache de sessão
+    try {
+      const emCache = sessionStorage.getItem(cacheKey);
+      if (emCache) {
+        setMarcos(JSON.parse(emCache));
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // Ignora cache
+    }
 
     // Anos da linha do tempo: 5, 10, 15, 20 e 30 anos atrás
     const pontosConfig = [
@@ -53,39 +66,71 @@ export function TimeCapsuleModal({
       { label: "Há 30 anos", ano: anoAtual - 30 },
     ];
 
-    try {
-      const requisicoes = pontosConfig.map(async (p) => {
-        const dataIso = `${p.ano}-${mesDia}`;
-        const params = new URLSearchParams({
-          latitude: cidade.coordenadas.latitude.toFixed(6),
-          longitude: cidade.coordenadas.longitude.toFixed(6),
-          start_date: dataIso,
-          end_date: dataIso,
-          daily: "temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code",
-          timezone: "auto",
-        });
+    const resultados: PontoHistorico[] = [];
+    let falhas = 0;
 
-        const res = await fetch(`https://archive-api.open-meteo.com/v1/archive?${params.toString()}`);
-        if (!res.ok) throw new Error();
-        const json = await res.json();
-
-        return {
-          label: p.label,
-          ano: p.ano,
-          max: json.daily?.temperature_2m_max?.[0] ?? 0,
-          min: json.daily?.temperature_2m_min?.[0] ?? 0,
-          chuva: json.daily?.precipitation_sum?.[0] ?? 0,
-          codigoClima: json.daily?.weather_code?.[0] ?? 0,
-        };
+    // Executa as consultas sequencialmente com pequeno intervalo para evitar rate limit (429) do Open-Meteo
+    for (const p of pontosConfig) {
+      const dataIso = `${p.ano}-${mesDia}`;
+      const params = new URLSearchParams({
+        latitude: cidade.coordenadas.latitude.toFixed(6),
+        longitude: cidade.coordenadas.longitude.toFixed(6),
+        start_date: dataIso,
+        end_date: dataIso,
+        daily: "temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code",
+        timezone: "auto",
       });
 
-      const resultados = await Promise.all(requisicoes);
-      setMarcos(resultados);
-    } catch {
-      setErro("Não foi possível carregar alguns pontos históricos desta localidade.");
-    } finally {
-      setLoading(false);
+      let sucesso = false;
+
+      // Até 2 tentativas por marco temporal caso a API responda com 429
+      for (let tentativa = 0; tentativa < 2; tentativa++) {
+        try {
+          const res = await fetch(`https://archive-api.open-meteo.com/v1/archive?${params.toString()}`);
+          if (res.status === 429) {
+            await new Promise((r) => setTimeout(r, 450));
+            continue;
+          }
+          if (!res.ok) throw new Error();
+          const json = await res.json();
+
+          resultados.push({
+            label: p.label,
+            ano: p.ano,
+            max: json.daily?.temperature_2m_max?.[0] ?? 0,
+            min: json.daily?.temperature_2m_min?.[0] ?? 0,
+            chuva: json.daily?.precipitation_sum?.[0] ?? 0,
+            codigoClima: json.daily?.weather_code?.[0] ?? 0,
+          });
+          sucesso = true;
+          break;
+        } catch {
+          // Tentativa falhou
+        }
+      }
+
+      if (!sucesso) {
+        falhas++;
+      }
+
+      // Intervalo anti-concorrência
+      await new Promise((r) => setTimeout(r, 200));
     }
+
+    if (resultados.length > 0) {
+      setMarcos(resultados);
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(resultados));
+      } catch {
+        // Ignora
+      }
+    }
+
+    if (falhas > 0 && resultados.length === 0) {
+      setErro("Limite temporário da API de arquivo atingido. Aguarde alguns segundos e tente novamente.");
+    }
+
+    setLoading(false);
   }, [cidade.coordenadas.latitude, cidade.coordenadas.longitude]);
 
   useEffect(() => {

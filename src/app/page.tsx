@@ -20,6 +20,7 @@ import {
   getAlertasINMET,
   getAlertasCEMADEN,
   calcularRiscoFogo,
+  getDadosElNino,
   reverseGeocodeGPS,
 } from "@/services/api";
 import { resolverTemaEfetivo } from "@/utils/theme";
@@ -33,6 +34,7 @@ import { TimeCapsuleModal } from "@/components/TimeCapsuleModal";
 import { CloudSunRain, AlertCircle, Info, Sparkles } from "lucide-react";
 
 const HISTORICO_LOCALSTORAGE_KEY = "climabr_cidades_recentes";
+const FAVORITOS_LOCALSTORAGE_KEY = "climabr_cidades_favoritas";
 const TEMA_LOCALSTORAGE_KEY = "climabr_tema_preferido";
 
 function WeatherAppContent() {
@@ -50,6 +52,8 @@ function WeatherAppContent() {
 
   // Histórico de buscas recentes (LocalStorage)
   const [historico, setHistorico] = useState<CidadeHistorico[]>([]);
+  // Cidades Favoritas (LocalStorage)
+  const [favoritos, setFavoritos] = useState<CidadeHistorico[]>([]);
 
   // Estados de carregamento e erro
   const [loadingEstados, setLoadingEstados] = useState<boolean>(true);
@@ -101,6 +105,43 @@ function WeatherAppContent() {
     });
   }, []);
 
+  // Alternar cidade como favorita (Fixar / Desafixar)
+  const handleToggleFavorito = useCallback(() => {
+    if (!dadosClima) return;
+    const id = dadosClima.municipioId;
+    const nome = dadosClima.municipio;
+    const uf = dadosClima.uf;
+
+    setFavoritos((prev) => {
+      const jaExiste = prev.some((item) => item.municipioId === id);
+      let novo: CidadeHistorico[];
+      if (jaExiste) {
+        novo = prev.filter((item) => item.municipioId !== id);
+      } else {
+        novo = [{ municipioId: id, municipioNome: nome, uf }, ...prev];
+      }
+      try {
+        localStorage.setItem(FAVORITOS_LOCALSTORAGE_KEY, JSON.stringify(novo));
+      } catch {
+        // Ignora erros
+      }
+      return novo;
+    });
+  }, [dadosClima]);
+
+  // Remover cidade favorita específica
+  const handleRemoverFavorito = useCallback((id: string) => {
+    setFavoritos((prev) => {
+      const novo = prev.filter((item) => item.municipioId !== id);
+      try {
+        localStorage.setItem(FAVORITOS_LOCALSTORAGE_KEY, JSON.stringify(novo));
+      } catch {
+        // Ignora erros
+      }
+      return novo;
+    });
+  }, []);
+
   // Executa a busca completa com coordenadas conhecidas ou id do IBGE
   const executarBusca = useCallback(
     async (
@@ -119,13 +160,14 @@ function WeatherAppContent() {
           : await getCoordenadasMunicipio(municipioId);
 
         // Passo 2: Buscar clima e dados complementares em paralelo com resiliência total
-        const [climaRes, qualidadeArRes, wikiRes, noticiasRes, alertasInmetRes, cemadenRes] = await Promise.allSettled([
+        const [climaRes, qualidadeArRes, wikiRes, noticiasRes, alertasInmetRes, cemadenRes, elNinoRes] = await Promise.allSettled([
           getClimaCompleto(coordenadas.latitude, coordenadas.longitude),
           getQualidadeAr(coordenadas.latitude, coordenadas.longitude),
           getResumoWikipedia(municipioNome),
           getNoticiasIBGE(uf),
           getAlertasINMET(uf, municipioId),
           getAlertasCEMADEN(municipioId, uf, municipioNome),
+          getDadosElNino(uf),
         ]);
 
         if (climaRes.status !== "fulfilled") {
@@ -150,6 +192,7 @@ function WeatherAppContent() {
           alertasINMET: alertasInmetRes.status === "fulfilled" ? alertasInmetRes.value : [],
           alertasCEMADEN: cemadenRes.status === "fulfilled" ? cemadenRes.value : [],
           riscoFogo,
+          elNino: elNinoRes.status === "fulfilled" ? elNinoRes.value : undefined,
         });
 
         // Atualiza a URL do navegador suavemente apenas para permitir copiar o link
@@ -196,6 +239,16 @@ function WeatherAppContent() {
         const historicoSalvo = localStorage.getItem(HISTORICO_LOCALSTORAGE_KEY);
         if (historicoSalvo) {
           setHistorico(JSON.parse(historicoSalvo));
+        }
+      } catch {
+        // Ignora
+      }
+
+      // Carregar cidades favoritas salvas no localStorage
+      try {
+        const favoritosSalvo = localStorage.getItem(FAVORITOS_LOCALSTORAGE_KEY);
+        if (favoritosSalvo) {
+          setFavoritos(JSON.parse(favoritosSalvo));
         }
       } catch {
         // Ignora
@@ -404,6 +457,8 @@ function WeatherAppContent() {
             loadingClima={loadingClima}
             loadingGPS={loadingGPS}
             historico={historico}
+            favoritos={favoritos}
+            onRemoverFavorito={handleRemoverFavorito}
             onEstadoChange={handleEstadoChange}
             onCidadeChange={handleCidadeChange}
             onSelecionarHistorico={handleSelecionarHistorico}
@@ -433,6 +488,8 @@ function WeatherAppContent() {
           ) : dadosClima ? (
             <WeatherCard
               data={dadosClima}
+              isFavorito={favoritos.some((f) => f.municipioId === dadosClima.municipioId)}
+              onToggleFavorito={handleToggleFavorito}
               onAbrirComparador={() => setIsComparadorAberto(true)}
               onAbrirCapsula={() => setIsCapsulaAberta(true)}
             />

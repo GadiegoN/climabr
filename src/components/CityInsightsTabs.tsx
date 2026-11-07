@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Coordenadas, WikipediaResumo, NoticiaIBGE } from "@/types/weather";
+import { Coordenadas, WikipediaResumo, NoticiaIBGE, CidadeHistorico } from "@/types/weather";
 import { CityMap } from "@/components/CityMap";
 import { Map, BookOpen, Newspaper, ExternalLink, Calendar, Compass, Building2 } from "lucide-react";
 
@@ -11,6 +11,8 @@ interface CityInsightsTabsProps {
   uf: string;
   wikipedia?: WikipediaResumo;
   noticiasIBGE?: NoticiaIBGE[];
+  favoritos?: CidadeHistorico[];
+  onSelecionarCidade?: (id: string, nome: string, uf: string, coordenadas?: Coordenadas) => void;
 }
 
 type TabTipo = "mapa" | "historia" | "noticias";
@@ -21,6 +23,8 @@ export default function CityInsightsTabs({
   uf,
   wikipedia,
   noticiasIBGE = [],
+  favoritos = [],
+  onSelecionarCidade,
 }: CityInsightsTabsProps) {
   const [tabAtiva, setTabAtiva] = useState<TabTipo>("mapa");
 
@@ -97,7 +101,13 @@ export default function CityInsightsTabs({
         {/* ABA 1: MAPA INTERATIVO */}
         {tabAtiva === "mapa" && (
           <div className="space-y-4">
-            <CityMap coordenadas={coordenadas} municipio={municipio} uf={uf} />
+            <CityMap
+              coordenadas={coordenadas}
+              municipio={municipio}
+              uf={uf}
+              favoritos={favoritos}
+              onSelecionarCidade={onSelecionarCidade}
+            />
             <div className="flex flex-wrap items-center justify-between text-xs text-[var(--text-muted)] gap-2 pt-1 border-t border-[var(--card-border)]">
               <span className="flex items-center gap-1.5">
                 <Compass className="w-3.5 h-3.5 text-sky-400" />

@@ -131,6 +131,12 @@ html {
    o brilho estético nos Temas Escuros
    =================================================== */
 
+/* Modo escuro suave para mapas OpenStreetMap (zero marcas d'água de API key) */
+[data-theme="escuro"] .leaflet-tile,
+[data-theme="anoitecer"] .leaflet-tile {
+  filter: brightness(0.72) invert(1) contrast(1.15) hue-rotate(200deg) saturate(0.75);
+}
+
 .badge-emerald {
   background-color: rgba(16, 185, 129, 0.15);
   border: 1px solid rgba(16, 185, 129, 0.35);

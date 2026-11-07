@@ -34,8 +34,11 @@ export const metadata: Metadata = {
     telephone: false,
   },
   icons: {
-    icon: "/icon",
-    apple: "/icon",
+    icon: [
+      { url: "/icon", type: "image/png" },
+    ],
+    shortcut: "/icon",
+    apple: "/apple-icon",
   },
 };
 

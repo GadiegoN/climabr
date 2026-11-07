@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { DadosClimaCidade } from "@/types/weather";
+import { DadosClimaCidade, CidadeHistorico, Coordenadas } from "@/types/weather";
 import { mapearCodigoClima } from "@/utils/weatherCodes";
 import { WeatherIcon } from "./WeatherIcon";
 import { WeatherChart } from "./WeatherChart";
@@ -37,7 +37,9 @@ import {
 interface WeatherCardProps {
   data: DadosClimaCidade;
   isFavorito?: boolean;
+  favoritos?: CidadeHistorico[];
   onToggleFavorito?: () => void;
+  onSelecionarCidade?: (id: string, nome: string, uf: string, coordenadas?: Coordenadas) => void;
   onAbrirComparador?: () => void;
   onAbrirCapsula?: () => void;
 }
@@ -45,7 +47,9 @@ interface WeatherCardProps {
 export function WeatherCard({
   data,
   isFavorito = false,
+  favoritos = [],
   onToggleFavorito,
+  onSelecionarCidade,
   onAbrirComparador,
   onAbrirCapsula,
 }: WeatherCardProps) {
@@ -93,22 +97,22 @@ export function WeatherCard({
     <div className="w-full max-w-3xl mx-auto space-y-6">
       {/* ⚠️ Banner de Alerta Crítico (se houver aviso severo ativo na região) */}
       {data.alertasINMET && data.alertasINMET.some((a) => a.severidade?.toLowerCase().includes("perigo") || a.nivel >= 2) && (
-        <div className="space-y-2">
+        <div className="space-y-2 w-full">
           {data.alertasINMET
             .filter((a) => a.severidade?.toLowerCase().includes("perigo") || a.nivel >= 2)
             .slice(0, 1)
             .map((alerta, idx) => (
               <div
                 key={idx}
-                className="p-4 rounded-2xl badge-amber flex items-start gap-3 backdrop-blur-md shadow-lg"
+                className="w-full p-4 rounded-2xl badge-amber flex items-start gap-3 backdrop-blur-md shadow-lg overflow-hidden"
               >
                 <ShieldAlert className="w-5 h-5 flex-shrink-0 text-amber-500 mt-0.5" />
-                <div className="text-sm">
-                  <div className="font-bold flex items-center gap-2">
+                <div className="text-sm min-w-0 flex-1 space-y-1">
+                  <div className="font-bold flex items-center gap-2 flex-wrap text-sm leading-snug">
                     <span>Aviso Meteorológico INMET: {alerta.evento} ({alerta.severidade})</span>
                   </div>
                   {alerta.riscos && alerta.riscos.length > 0 && (
-                    <p className="opacity-90 text-xs mt-1">{alerta.riscos[0]}</p>
+                    <p className="opacity-90 text-xs leading-relaxed break-words whitespace-normal">{alerta.riscos[0]}</p>
                   )}
                 </div>
               </div>
@@ -562,6 +566,8 @@ export function WeatherCard({
         uf={data.uf}
         wikipedia={data.wikipedia}
         noticiasIBGE={data.noticiasIBGE}
+        favoritos={favoritos}
+        onSelecionarCidade={onSelecionarCidade}
       />
 
       {/* 📸 Modal de Compartilhamento Social & WhatsApp */}

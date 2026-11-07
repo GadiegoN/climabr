@@ -169,11 +169,12 @@ export interface DadosElNino {
   impactoRegional: ImpactoRegionalENSO;
 }
 
-// Histórico de buscas recentes salvas no navegador (LocalStorage)
+// Histórico de buscas recentes e favoritos salvos no navegador (LocalStorage)
 export interface CidadeHistorico {
   municipioId: string;
   municipioNome: string;
   uf: string;
+  coordenadas?: Coordenadas;
 }
 
 // Tipos para o Sistema de Temas Visuais

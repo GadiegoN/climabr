@@ -92,10 +92,10 @@ function WeatherAppContent() {
   };
 
   // Salvar cidade no histórico local
-  const salvarNoHistorico = useCallback((municipioId: string, municipioNome: string, uf: string) => {
+  const salvarNoHistorico = useCallback((municipioId: string, municipioNome: string, uf: string, coordenadas?: { latitude: number; longitude: number }) => {
     setHistorico((prev) => {
       const filtrado = prev.filter((item) => item.municipioId !== municipioId);
-      const novo = [{ municipioId, municipioNome, uf }, ...filtrado].slice(0, 5);
+      const novo = [{ municipioId, municipioNome, uf, coordenadas }, ...filtrado].slice(0, 5);
       try {
         localStorage.setItem(HISTORICO_LOCALSTORAGE_KEY, JSON.stringify(novo));
       } catch {
@@ -111,6 +111,7 @@ function WeatherAppContent() {
     const id = dadosClima.municipioId;
     const nome = dadosClima.municipio;
     const uf = dadosClima.uf;
+    const coordenadas = dadosClima.coordenadas;
 
     setFavoritos((prev) => {
       const jaExiste = prev.some((item) => item.municipioId === id);
@@ -118,7 +119,7 @@ function WeatherAppContent() {
       if (jaExiste) {
         novo = prev.filter((item) => item.municipioId !== id);
       } else {
-        novo = [{ municipioId: id, municipioNome: nome, uf }, ...prev];
+        novo = [{ municipioId: id, municipioNome: nome, uf, coordenadas }, ...prev];
       }
       try {
         localStorage.setItem(FAVORITOS_LOCALSTORAGE_KEY, JSON.stringify(novo));
@@ -204,7 +205,7 @@ function WeatherAppContent() {
           window.history.replaceState(null, "", url.toString());
         }
 
-        salvarNoHistorico(municipioId, municipioNome, uf);
+        salvarNoHistorico(municipioId, municipioNome, uf, coordenadas);
       } catch (err) {
         setErro(
           err instanceof Error
@@ -489,7 +490,14 @@ function WeatherAppContent() {
             <WeatherCard
               data={dadosClima}
               isFavorito={favoritos.some((f) => f.municipioId === dadosClima.municipioId)}
+              favoritos={favoritos}
               onToggleFavorito={handleToggleFavorito}
+              onSelecionarCidade={(id, nome, uf, coords) => {
+                setEstadoSelecionado(uf);
+                setCidadeSelecionadaId(id);
+                getMunicipiosPorUF(uf).then(setMunicipios).catch(() => {});
+                executarBusca(id, nome, uf, coords);
+              }}
               onAbrirComparador={() => setIsComparadorAberto(true)}
               onAbrirCapsula={() => setIsCapsulaAberta(true)}
             />

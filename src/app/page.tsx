@@ -143,6 +143,29 @@ function WeatherAppContent() {
     });
   }, []);
 
+  // Remover consulta recente específica
+  const handleRemoverHistorico = useCallback((id: string) => {
+    setHistorico((prev) => {
+      const novo = prev.filter((item) => item.municipioId !== id);
+      try {
+        localStorage.setItem(HISTORICO_LOCALSTORAGE_KEY, JSON.stringify(novo));
+      } catch {
+        // Ignora erros
+      }
+      return novo;
+    });
+  }, []);
+
+  // Limpar todo o histórico recente
+  const handleLimparHistorico = useCallback(() => {
+    setHistorico([]);
+    try {
+      localStorage.removeItem(HISTORICO_LOCALSTORAGE_KEY);
+    } catch {
+      // Ignora erros
+    }
+  }, []);
+
   // Executa a busca completa com coordenadas conhecidas ou id do IBGE
   const executarBusca = useCallback(
     async (
@@ -156,9 +179,26 @@ function WeatherAppContent() {
         setErro(null);
 
         // Passo 1: Obter coordenadas geográficas (via IBGE ou GPS)
-        const coordenadas = coordenadasPreDefinidas
-          ? coordenadasPreDefinidas
-          : await getCoordenadasMunicipio(municipioId);
+        let coordenadas = coordenadasPreDefinidas;
+        if (!coordenadas) {
+          if (municipioId === "gps") {
+            // Tenta obter coordenadas pelo nome do município no IBGE se não foram salvas
+            try {
+              const cidadesUf = await getMunicipiosPorUF(uf);
+              const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+              const encontrada = cidadesUf.find((c) => norm(c.nome) === norm(municipioNome));
+              if (encontrada) {
+                coordenadas = await getCoordenadasMunicipio(encontrada.id);
+              } else {
+                throw new Error("Esta consulta gravada não possui coordenadas. Use o botão 'Usar minha localização atual' para renovar.");
+              }
+            } catch {
+              throw new Error("Esta consulta gravada não possui coordenadas. Use o botão 'Usar minha localização atual' para renovar.");
+            }
+          } else {
+            coordenadas = await getCoordenadasMunicipio(municipioId);
+          }
+        }
 
         // Passo 2: Buscar clima e dados complementares em paralelo com resiliência total
         const [climaRes, qualidadeArRes, wikiRes, noticiasRes, alertasInmetRes, cemadenRes, elNinoRes] = await Promise.allSettled([
@@ -348,7 +388,7 @@ function WeatherAppContent() {
       .then(setMunicipios)
       .catch(() => {});
 
-    await executarBusca(item.municipioId, item.municipioNome, item.uf);
+    await executarBusca(item.municipioId, item.municipioNome, item.uf, item.coordenadas);
   };
 
   // 5. Botão "Usar Minha Localização Atual" (GPS do Navegador)
@@ -370,9 +410,38 @@ function WeatherAppContent() {
           const uf = geo?.uf || "BR";
 
           setEstadoSelecionado(uf);
-          setCidadeSelecionadaId("gps");
 
-          await executarBusca("gps", cidadeNome, uf, { latitude, longitude });
+          // Tenta identificar o ID oficial do município correspondente no IBGE
+          let idFinal = "gps";
+          let nomeFinal = cidadeNome;
+
+          try {
+            const cidadesDaUf = await getMunicipiosPorUF(uf);
+            setMunicipios(cidadesDaUf);
+
+            const normalizar = (s: string) =>
+              s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const buscado = normalizar(cidadeNome);
+
+            const encontrada = cidadesDaUf.find(
+              (m) =>
+                normalizar(m.nome) === buscado ||
+                normalizar(m.nome).includes(buscado) ||
+                buscado.includes(normalizar(m.nome))
+            );
+
+            if (encontrada) {
+              idFinal = String(encontrada.id);
+              nomeFinal = encontrada.nome;
+              setCidadeSelecionadaId(idFinal);
+            } else {
+              setCidadeSelecionadaId("gps");
+            }
+          } catch {
+            setCidadeSelecionadaId("gps");
+          }
+
+          await executarBusca(idFinal, nomeFinal, uf, { latitude, longitude });
         } catch {
           setErro("Não foi possível identificar a cidade correspondente ao seu GPS.");
         } finally {
@@ -460,6 +529,8 @@ function WeatherAppContent() {
             historico={historico}
             favoritos={favoritos}
             onRemoverFavorito={handleRemoverFavorito}
+            onRemoverHistorico={handleRemoverHistorico}
+            onLimparHistorico={handleLimparHistorico}
             onEstadoChange={handleEstadoChange}
             onCidadeChange={handleCidadeChange}
             onSelecionarHistorico={handleSelecionarHistorico}

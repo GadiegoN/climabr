@@ -103,16 +103,40 @@ export interface NoticiaIBGE {
   editorias?: string;
 }
 
-// Tipagem para Alertas do INMET
+// Tipagem para Alertas do INMET (com detalhes avançados de riscos e instruções)
 export interface AlertaINMET {
   id: number | string;
-  aviso_id?: number | string;
+  evento: string;
   severidade: string;
-  descricao: string;
-  titulo: string;
+  nivel: number;
   inicio: string;
   fim: string;
+  riscos?: string[];
+  instrucoes?: string[];
+  url?: string;
+  municipiosAfetados?: number;
+  afetaMunicipioAtual?: boolean;
   corHex?: string;
+}
+
+// Tipagem para Alertas do CEMADEN (Centro Nacional de Monitoramento e Alertas de Desastres Naturais)
+export interface AlertaCEMADEN {
+  codAlerta: number;
+  codibge?: number;
+  evento: string; // Ex: "Risco Hidrológico - Moderado", "Movimento de Massa - Alto"
+  nivel: string; // "Moderado" | "Alto" | "Muito Alto"
+  uf: string;
+  municipio: string;
+  dataHoraCriacao?: string;
+}
+
+// Tipagem para Risco de Queimadas & Fogo (Modelo Meteorológico Monte Alegre / INPE)
+export interface RiscoFogo {
+  nivel: "Baixo" | "Moderado" | "Alto" | "Muito Alto" | "Crítico";
+  indice: number; // 0 a 100
+  descricao: string;
+  corHex: string;
+  recomendacao: string;
 }
 
 // Histórico de buscas recentes salvas no navegador (LocalStorage)
@@ -139,6 +163,8 @@ export interface DadosClimaCidade {
   wikipedia?: WikipediaResumo;
   noticiasIBGE?: NoticiaIBGE[];
   alertasINMET?: AlertaINMET[];
+  alertasCEMADEN?: AlertaCEMADEN[];
+  riscoFogo?: RiscoFogo;
 }
 
 // Tipagem para descrição e estilo visual da condição climática

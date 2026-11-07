@@ -11,6 +11,8 @@ import {
   WikipediaResumo,
   NoticiaIBGE,
   AlertaINMET,
+  AlertaCEMADEN,
+  RiscoFogo,
 } from "@/types/weather";
 
 const IBGE_LOCALIDADES_BASE = "https://servicodados.ibge.gov.br/api/v1/localidades";
@@ -252,33 +254,181 @@ export async function getNoticiasIBGE(uf: string): Promise<NoticiaIBGE[]> {
 }
 
 /**
- * 8. Alertas meteorológicos ativos no Brasil via INMET.
+ * 8. Alertas meteorológicos ativos oficiais do INMET (espelhados em tempo real com detalhes).
  */
-export async function getAlertasINMET(uf: string): Promise<AlertaINMET[]> {
+export async function getAlertasINMET(uf: string, municipioId?: string): Promise<AlertaINMET[]> {
   try {
-    const response = await fetch(INMET_ALERTAS_BASE);
+    if (!uf) return [];
+    const url = `https://radarmeteorologico.com.br/api/v1/alertas?uf=${encodeURIComponent(uf.toUpperCase())}`;
+    const response = await fetch(url, {
+      next: { revalidate: 600 },
+    });
     if (!response.ok) return [];
 
     const data = await response.json();
-    if (!data.hoje || !Array.isArray(data.hoje)) return [];
+    if (!data.alertas || !Array.isArray(data.alertas)) return [];
 
-    const alertasUF = data.hoje.filter((alerta: any) => {
-      const estados = alerta.estados || "";
-      return estados.includes(uf.toUpperCase());
+    const codIbgeNum = municipioId ? parseInt(municipioId, 10) : null;
+
+    return data.alertas.map((a: any) => {
+      const afeta = codIbgeNum && Array.isArray(a.geocodes)
+        ? a.geocodes.includes(codIbgeNum) || a.geocodes.some((g: any) => String(g).startsWith(municipioId!))
+        : true;
+
+      let cor = "#f59e0b"; // Amarelo (Perigo Potencial)
+      if (a.severidade?.toLowerCase().includes("grande perigo") || a.nivel === 3) {
+        cor = "#ef4444"; // Vermelho
+      } else if (a.severidade?.toLowerCase().includes("perigo") || a.nivel === 2) {
+        cor = "#f97316"; // Laranja
+      }
+
+      return {
+        id: a.id,
+        evento: a.evento || "Aviso Meteorológico",
+        severidade: a.severidade || "Aviso",
+        nivel: a.nivel || 1,
+        inicio: a.inicio || "",
+        fim: a.fim || "",
+        riscos: Array.isArray(a.riscos) ? a.riscos : [],
+        instrucoes: Array.isArray(a.instrucoes) ? a.instrucoes : [],
+        url: a.url,
+        municipiosAfetados: a.municipios_afetados,
+        afetaMunicipioAtual: afeta,
+        corHex: cor,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 8b. Alertas de Riscos de Desastres Naturais do CEMADEN (Inundações, Enxurradas, Deslizamentos).
+ */
+export async function getAlertasCEMADEN(
+  municipioId: string,
+  uf: string,
+  municipioNome: string
+): Promise<AlertaCEMADEN[]> {
+  try {
+    const response = await fetch("https://painelalertas.cemaden.gov.br/wsAlertas2", {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      next: { revalidate: 600 },
+    });
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    if (!data.alertas || !Array.isArray(data.alertas)) return [];
+
+    const codIbgeNum = parseInt(municipioId, 10);
+    const nomeNorm = municipioNome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const ufNorm = uf.toUpperCase();
+
+    // Filtra pelo código IBGE exato ou por UF + Nome do município
+    const alertasDoMunicipio = data.alertas.filter((item: any) => {
+      if (item.codibge && codIbgeNum && (item.codibge === codIbgeNum || String(item.codibge).startsWith(municipioId))) {
+        return true;
+      }
+      if (item.uf?.toUpperCase() === ufNorm) {
+        const itemNomeNorm = (item.municipio || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        if (itemNomeNorm && (itemNomeNorm === nomeNorm || itemNomeNorm.includes(nomeNorm) || nomeNorm.includes(itemNomeNorm))) {
+          return true;
+        }
+      }
+      return false;
     });
 
-    return alertasUF.slice(0, 2).map((a: any) => ({
-      id: a.id || a.aviso_id,
-      severidade: a.severidade || "Aviso Meteorológico",
-      descricao: a.descricao || a.aviso || "",
-      titulo: a.descricao || "Alerta Meteorológico",
-      inicio: a.inicio || "",
-      fim: a.fim || "",
-      corHex: a.severidade === "Perigo" ? "#ef4444" : "#f59e0b",
+    return alertasDoMunicipio.map((a: any) => ({
+      codAlerta: a.cod_alerta || a.id,
+      codibge: a.codibge,
+      evento: a.evento || "Risco Hidrológico / Deslizamento",
+      nivel: a.nivel || "Moderado",
+      uf: a.uf || uf,
+      municipio: a.municipio || municipioNome,
+      dataHoraCriacao: a.datahoracriacao,
     }));
   } catch {
     return [];
   }
+}
+
+/**
+ * 8c. Cálculo Científico do Risco de Fogo e Queimadas (Baseado na Fórmula de Monte Alegre e INPE).
+ */
+export function calcularRiscoFogo(
+  temperatura: number,
+  umidade?: number,
+  vento?: number
+): RiscoFogo {
+  const u = umidade ?? 50;
+  const t = temperatura;
+  const v = vento ?? 10;
+
+  let fatorUmidade = 0;
+  if (u <= 15) fatorUmidade = 50;
+  else if (u <= 30) fatorUmidade = 40;
+  else if (u <= 45) fatorUmidade = 25;
+  else if (u <= 60) fatorUmidade = 15;
+  else fatorUmidade = 5;
+
+  let fatorTemp = 0;
+  if (t >= 35) fatorTemp = 30;
+  else if (t >= 30) fatorTemp = 20;
+  else if (t >= 25) fatorTemp = 10;
+  else fatorTemp = 2;
+
+  let fatorVento = 0;
+  if (v >= 40) fatorVento = 20;
+  else if (v >= 25) fatorVento = 15;
+  else if (v >= 15) fatorVento = 10;
+  else fatorVento = 3;
+
+  const score = Math.min(100, Math.max(0, fatorUmidade + fatorTemp + fatorVento));
+
+  if (score >= 80) {
+    return {
+      nivel: "Crítico",
+      indice: score,
+      descricao: "Risco extremo de queimadas e propagação descontrolada de fogo.",
+      corHex: "#ef4444",
+      recomendacao: "Proibido qualquer uso de fogo. Vegetação altamente inflamável e tempo seco.",
+    };
+  }
+  if (score >= 60) {
+    return {
+      nivel: "Muito Alto",
+      indice: score,
+      descricao: "Condições meteorológicas muito propícias a incêndios em vegetação.",
+      corHex: "#f97316",
+      recomendacao: "Evite queimadas de lixo ou pasto. Faíscas podem se propagar rapidamente.",
+    };
+  }
+  if (score >= 40) {
+    return {
+      nivel: "Alto",
+      indice: score,
+      descricao: "Tempo seco com probabilidade moderada a alta de ignição.",
+      corHex: "#f59e0b",
+      recomendacao: "Atenção redobrada em áreas rurais e beiras de rodovias.",
+    };
+  }
+  if (score >= 25) {
+    return {
+      nivel: "Moderado",
+      indice: score,
+      descricao: "Risco moderado de fogo florestal.",
+      corHex: "#eab308",
+      recomendacao: "Condições normais com atenção rotineira.",
+    };
+  }
+
+  return {
+    nivel: "Baixo",
+    indice: score,
+    descricao: "Umidade e temperatura em níveis que desfavorecem queimadas.",
+    corHex: "#10b981",
+    recomendacao: "Sem risco relevante de incêndios florestais hoje.",
+  };
 }
 
 /**

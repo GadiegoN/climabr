@@ -3,7 +3,8 @@ import { DadosClimaCidade } from "@/types/weather";
 import { mapearCodigoClima } from "@/utils/weatherCodes";
 import { WeatherIcon } from "./WeatherIcon";
 import { WeatherChart } from "./WeatherChart";
-import { CityMap } from "./CityMap";
+import EnvironmentalRadar from "./EnvironmentalRadar";
+import CityInsightsTabs from "./CityInsightsTabs";
 import {
   MapPin,
   Wind,
@@ -16,10 +17,7 @@ import {
   Sunset,
   Sunrise,
   ShieldAlert,
-  BookOpen,
   CloudRain,
-  Newspaper,
-  ExternalLink,
   Share2,
   Check,
   Clock,
@@ -68,30 +66,6 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
     }
   };
 
-  // Classificação do Índice UV
-  const getUVBadge = (uv?: number) => {
-    if (uv === undefined) return null;
-    if (uv <= 2) return { texto: "UV Baixo", cor: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40" };
-    if (uv <= 5) return { texto: "UV Moderado", cor: "bg-amber-500/20 text-amber-400 border-amber-500/40" };
-    if (uv <= 7) return { texto: "UV Alto", cor: "bg-orange-500/20 text-orange-400 border-orange-500/40" };
-    if (uv <= 10) return { texto: "UV Muito Alto", cor: "bg-rose-500/20 text-rose-400 border-rose-500/40" };
-    return { texto: "UV Extremo", cor: "bg-purple-500/20 text-purple-400 border-purple-500/40" };
-  };
-
-  const uvBadge = getUVBadge(data.qualidadeAr?.uvIndex);
-
-  // Classificação da Qualidade do Ar (European AQI)
-  const getAQIBadge = (aqi?: number) => {
-    if (aqi === undefined) return null;
-    if (aqi <= 20) return { texto: "Ar Excelente", cor: "bg-teal-500/20 text-teal-400" };
-    if (aqi <= 40) return { texto: "Ar Bom", cor: "bg-emerald-500/20 text-emerald-400" };
-    if (aqi <= 60) return { texto: "Ar Moderado", cor: "bg-yellow-500/20 text-yellow-400" };
-    if (aqi <= 80) return { texto: "Ar Ruim", cor: "bg-orange-500/20 text-orange-400" };
-    return { texto: "Ar Muito Ruim", cor: "bg-red-500/20 text-red-400" };
-  };
-
-  const aqiBadge = getAQIBadge(data.qualidadeAr?.aqi);
-
   const cardStyle = {
     backgroundColor: "var(--card-bg)",
     borderColor: "var(--card-border)",
@@ -100,23 +74,28 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
-      {/* ⚠️ Banner de Alerta do INMET (se houver aviso ativo) */}
-      {data.alertasINMET && data.alertasINMET.length > 0 && (
+      {/* ⚠️ Banner de Alerta Crítico (se houver aviso severo ativo na região) */}
+      {data.alertasINMET && data.alertasINMET.some((a) => a.severidade?.toLowerCase().includes("perigo") || a.nivel >= 2) && (
         <div className="space-y-2">
-          {data.alertasINMET.map((alerta, idx) => (
-            <div
-              key={idx}
-              className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-start gap-3 backdrop-blur-md shadow-lg"
-            >
-              <ShieldAlert className="w-5 h-5 flex-shrink-0 text-amber-500 mt-0.5" />
-              <div className="text-sm">
-                <div className="font-bold flex items-center gap-2">
-                  <span>Alerta Meteorológico INMET: {alerta.severidade}</span>
+          {data.alertasINMET
+            .filter((a) => a.severidade?.toLowerCase().includes("perigo") || a.nivel >= 2)
+            .slice(0, 1)
+            .map((alerta, idx) => (
+              <div
+                key={idx}
+                className="p-4 rounded-2xl badge-amber flex items-start gap-3 backdrop-blur-md shadow-lg"
+              >
+                <ShieldAlert className="w-5 h-5 flex-shrink-0 text-amber-500 mt-0.5" />
+                <div className="text-sm">
+                  <div className="font-bold flex items-center gap-2">
+                    <span>Aviso Meteorológico INMET: {alerta.evento} ({alerta.severidade})</span>
+                  </div>
+                  {alerta.riscos && alerta.riscos.length > 0 && (
+                    <p className="opacity-90 text-xs mt-1">{alerta.riscos[0]}</p>
+                  )}
                 </div>
-                <p className="opacity-90 text-xs mt-1">{alerta.descricao}</p>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       )}
 
@@ -406,7 +385,7 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
                   {/* Probabilidade de Chuva */}
                   <div className="mt-1.5 h-5 flex items-center justify-center">
                     {horaItem.probabilidadeChuva !== undefined && horaItem.probabilidadeChuva > 0 ? (
-                      <span className="text-[11px] font-semibold text-sky-500 bg-sky-500/15 px-2 py-0.5 rounded-full border border-sky-500/30 flex items-center gap-1">
+                      <span className="text-[11px] font-semibold badge-sky px-2 py-0.5 rounded-full flex items-center gap-1">
                         <CloudRain className="w-2.5 h-2.5" />
                         {horaItem.probabilidadeChuva}%
                       </span>
@@ -428,118 +407,14 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
         <WeatherChart dados={data.previsaoHoraria} />
       )}
 
-      {/* 🌿 Card de Saúde & Bem-Estar: Índice UV & Qualidade do Ar */}
-      {data.qualidadeAr && (
-        <div
-          style={cardStyle}
-          className="rounded-3xl p-5 border backdrop-blur-xl transition-all duration-300 grid grid-cols-1 sm:grid-cols-2 gap-4"
-        >
-          <div
-            style={{
-              backgroundColor: "var(--chip-bg)",
-              borderColor: "var(--chip-border)",
-            }}
-            className="flex items-center justify-between p-4 rounded-2xl border"
-          >
-            <div>
-              <p style={{ color: "var(--text-muted)" }} className="text-xs font-semibold uppercase">
-                Radiação Solar (Índice UV)
-              </p>
-              <p style={{ color: "var(--text-main)" }} className="text-2xl font-black mt-1">
-                {data.qualidadeAr.uvIndex !== undefined ? data.qualidadeAr.uvIndex.toFixed(1) : "--"}
-              </p>
-            </div>
-            {uvBadge && (
-              <span className={`px-3 py-1.5 rounded-xl text-xs font-bold border ${uvBadge.cor}`}>
-                {uvBadge.texto}
-              </span>
-            )}
-          </div>
-
-          <div
-            style={{
-              backgroundColor: "var(--chip-bg)",
-              borderColor: "var(--chip-border)",
-            }}
-            className="flex items-center justify-between p-4 rounded-2xl border"
-          >
-            <div>
-              <p style={{ color: "var(--text-muted)" }} className="text-xs font-semibold uppercase">
-                Qualidade do Ar (AQI)
-              </p>
-              <p style={{ color: "var(--text-main)" }} className="text-2xl font-black mt-1">
-                {data.qualidadeAr.aqi !== undefined ? data.qualidadeAr.aqi : "--"}
-              </p>
-              {data.qualidadeAr.pm25 !== undefined && (
-                <span style={{ color: "var(--text-muted)" }} className="text-[11px]">
-                  PM2.5: {data.qualidadeAr.pm25} µg/m³
-                </span>
-              )}
-            </div>
-            {aqiBadge && (
-              <span className={`px-3 py-1.5 rounded-xl text-xs font-bold ${aqiBadge.cor}`}>
-                {aqiBadge.texto}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 🏛️ Card da Cidade: Foto e Resumo Oficial (Wikipedia) */}
-      {data.wikipedia && (data.wikipedia.extrato || data.wikipedia.imagemUrl) && (
-        <div
-          style={cardStyle}
-          className="rounded-3xl overflow-hidden border backdrop-blur-xl transition-all duration-300"
-        >
-          <div className="p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 style={{ color: "var(--text-main)" }} className="text-lg font-bold flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-emerald-500" />
-                Sobre {data.wikipedia.titulo}
-              </h3>
-              {data.wikipedia.paginaUrl && (
-                <a
-                  href={data.wikipedia.paginaUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-emerald-500 hover:opacity-80 flex items-center gap-1 font-semibold"
-                >
-                  Wikipedia <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              )}
-            </div>
-
-            <div className="flex flex-col md:flex-row gap-5 items-start">
-              {data.wikipedia.imagemUrl && (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={data.wikipedia.imagemUrl}
-                  alt={data.wikipedia.titulo}
-                  style={{ borderColor: "var(--card-border)" }}
-                  className="w-full md:w-56 h-36 object-cover rounded-2xl border shadow-md flex-shrink-0"
-                />
-              )}
-              <div
-                style={{ color: "var(--text-main)" }}
-                className="space-y-2 text-sm leading-relaxed"
-              >
-                {data.wikipedia.descricao && (
-                  <p className="text-xs font-semibold text-emerald-500 uppercase tracking-wide">
-                    {data.wikipedia.descricao}
-                  </p>
-                )}
-                <p className="line-clamp-4 opacity-90">{data.wikipedia.extrato}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 🗺️ Mini Mapa Interativo da Cidade (OpenStreetMap) */}
-      <CityMap
+      {/* 🛡️ Radar Ambiental & Defesa Civil (Consolidação de INMET, CEMADEN, Risco de Fogo e Ar/UV) */}
+      <EnvironmentalRadar
         municipio={data.municipio}
         uf={data.uf}
-        coordenadas={data.coordenadas}
+        alertasINMET={data.alertasINMET}
+        alertasCEMADEN={data.alertasCEMADEN}
+        riscoFogo={data.riscoFogo}
+        qualidadeAr={data.qualidadeAr}
       />
 
       {/* 📅 Previsão para os Próximos 7 Dias (Open-Meteo) */}
@@ -601,7 +476,7 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
                   </div>
 
                   {dia.probabilidadeChuva !== undefined && (
-                    <div className="mt-1 flex items-center gap-1 text-[11px] text-sky-500 font-medium">
+                    <div className="mt-1 flex items-center justify-center gap-1 text-[11px] badge-sky px-2 py-0.5 rounded-full font-medium">
                       <CloudRain className="w-3 h-3" />
                       {dia.probabilidadeChuva}%
                     </div>
@@ -613,54 +488,14 @@ export function WeatherCard({ data, onAbrirComparador, onAbrirCapsula }: Weather
         </div>
       )}
 
-      {/* 📰 Últimas Notícias do Estado (Agência IBGE Notícias) */}
-      {data.noticiasIBGE && data.noticiasIBGE.length > 0 && (
-        <div
-          style={cardStyle}
-          className="rounded-3xl p-6 border backdrop-blur-xl transition-all duration-300 space-y-4"
-        >
-          <div className="flex items-center justify-between">
-            <h3 style={{ color: "var(--text-main)" }} className="text-base font-bold flex items-center gap-2">
-              <Newspaper className="w-4 h-4 text-emerald-500" />
-              Últimas Notícias Oficiais do IBGE
-            </h3>
-            <span style={{ color: "var(--text-muted)" }} className="text-xs font-medium">
-              Agência IBGE
-            </span>
-          </div>
-
-          <div
-            style={{ borderColor: "var(--card-border)" }}
-            className="divide-y"
-          >
-            {data.noticiasIBGE.map((noticia) => (
-              <a
-                key={noticia.id}
-                href={noticia.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block py-3.5 group hover:opacity-80 transition-all"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <h4
-                    style={{ color: "var(--text-main)" }}
-                    className="text-sm font-semibold group-hover:text-emerald-500 transition-colors"
-                  >
-                    {noticia.titulo}
-                  </h4>
-                  <ExternalLink className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                </div>
-                <p style={{ color: "var(--text-muted)" }} className="text-xs mt-1 line-clamp-2 leading-relaxed">
-                  {noticia.introducao}
-                </p>
-                <span style={{ color: "var(--text-muted)" }} className="text-[10px] mt-1.5 inline-block opacity-75">
-                  Publicado em: {noticia.data_publicacao}
-                </span>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* 🏛️ Sobre a Cidade (Abas Unificadas: Mapa Interativo, História Wikipedia e Notícias IBGE) */}
+      <CityInsightsTabs
+        coordenadas={data.coordenadas}
+        municipio={data.municipio}
+        uf={data.uf}
+        wikipedia={data.wikipedia}
+        noticiasIBGE={data.noticiasIBGE}
+      />
     </div>
   );
 }

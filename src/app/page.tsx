@@ -18,6 +18,8 @@ import {
   getResumoWikipedia,
   getNoticiasIBGE,
   getAlertasINMET,
+  getAlertasCEMADEN,
+  calcularRiscoFogo,
   reverseGeocodeGPS,
 } from "@/services/api";
 import { resolverTemaEfetivo } from "@/utils/theme";
@@ -117,12 +119,13 @@ function WeatherAppContent() {
           : await getCoordenadasMunicipio(municipioId);
 
         // Passo 2: Buscar clima e dados complementares em paralelo com resiliência total
-        const [climaRes, qualidadeArRes, wikiRes, noticiasRes, alertasRes] = await Promise.allSettled([
+        const [climaRes, qualidadeArRes, wikiRes, noticiasRes, alertasInmetRes, cemadenRes] = await Promise.allSettled([
           getClimaCompleto(coordenadas.latitude, coordenadas.longitude),
           getQualidadeAr(coordenadas.latitude, coordenadas.longitude),
           getResumoWikipedia(municipioNome),
           getNoticiasIBGE(uf),
-          getAlertasINMET(uf),
+          getAlertasINMET(uf, municipioId),
+          getAlertasCEMADEN(municipioId, uf, municipioNome),
         ]);
 
         if (climaRes.status !== "fulfilled") {
@@ -130,6 +133,7 @@ function WeatherAppContent() {
         }
 
         const { clima, unidades, previsaoDiaria, previsaoHoraria } = climaRes.value;
+        const riscoFogo = calcularRiscoFogo(clima.temperature, clima.relative_humidity, clima.windspeed);
 
         setDadosClima({
           municipioId,
@@ -143,7 +147,9 @@ function WeatherAppContent() {
           qualidadeAr: qualidadeArRes.status === "fulfilled" ? qualidadeArRes.value ?? undefined : undefined,
           wikipedia: wikiRes.status === "fulfilled" ? wikiRes.value ?? undefined : undefined,
           noticiasIBGE: noticiasRes.status === "fulfilled" ? noticiasRes.value : [],
-          alertasINMET: alertasRes.status === "fulfilled" ? alertasRes.value : [],
+          alertasINMET: alertasInmetRes.status === "fulfilled" ? alertasInmetRes.value : [],
+          alertasCEMADEN: cemadenRes.status === "fulfilled" ? cemadenRes.value : [],
+          riscoFogo,
         });
 
         // Atualiza a URL do navegador suavemente apenas para permitir copiar o link

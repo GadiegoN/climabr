@@ -125,6 +125,108 @@ html {
   height: 6px;
 }
 
+/* ===================================================
+   SISTEMA DE BADGES COM CONTRASTE INTELIGENTE POR TEMA
+   Alto contraste e nitidez no Tema Claro sem estragar
+   o brilho estético nos Temas Escuros
+   =================================================== */
+
+.badge-emerald {
+  background-color: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+[data-theme="claro"] .badge-emerald {
+  background-color: #d1fae5;
+  border-color: #a7f3d0;
+  color: #065f46;
+  font-weight: 700;
+}
+
+.badge-amber {
+  background-color: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+}
+[data-theme="claro"] .badge-amber {
+  background-color: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.badge-orange {
+  background-color: rgba(249, 115, 22, 0.18);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  color: #fb923c;
+}
+[data-theme="claro"] .badge-orange {
+  background-color: #ffedd5;
+  border-color: #fed7aa;
+  color: #9a3412;
+  font-weight: 700;
+}
+
+.badge-rose {
+  background-color: rgba(244, 63, 94, 0.18);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+  color: #fda4af;
+}
+[data-theme="claro"] .badge-rose {
+  background-color: #ffe4e6;
+  border-color: #fecdd3;
+  color: #9f1239;
+  font-weight: 700;
+}
+
+.badge-purple {
+  background-color: rgba(168, 85, 247, 0.18);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  color: #c084fc;
+}
+[data-theme="claro"] .badge-purple {
+  background-color: #f3e8ff;
+  border-color: #e9d5ff;
+  color: #581c87;
+  font-weight: 700;
+}
+
+.badge-teal {
+  background-color: rgba(20, 184, 166, 0.18);
+  border: 1px solid rgba(20, 184, 166, 0.35);
+  color: #2dd4bf;
+}
+[data-theme="claro"] .badge-teal {
+  background-color: #ccfbf1;
+  border-color: #99f6e4;
+  color: #115e59;
+  font-weight: 700;
+}
+
+.badge-sky {
+  background-color: rgba(14, 165, 233, 0.15);
+  border: 1px solid rgba(14, 165, 233, 0.35);
+  color: #38bdf8;
+}
+[data-theme="claro"] .badge-sky {
+  background-color: #e0f2fe;
+  border-color: #bae6fd;
+  color: #0369a1;
+  font-weight: 700;
+}
+
+.badge-neutral {
+  background-color: rgba(100, 116, 139, 0.18);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  color: #cbd5e1;
+}
+[data-theme="claro"] .badge-neutral {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
+  font-weight: 700;
+}
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: var(--card-bg);
   border-radius: 9999px;

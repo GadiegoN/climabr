@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Coordenadas, WikipediaResumo, NoticiaIBGE, CidadeHistorico } from "@/types/weather";
 import { CityMap } from "@/components/CityMap";
 import { Map, BookOpen, Newspaper, ExternalLink, Calendar, Compass, Building2 } from "lucide-react";
+import { formatarDataHoraBR } from "@/utils/dateFormat";
 
 interface CityInsightsTabsProps {
   coordenadas: Coordenadas;
@@ -187,7 +188,7 @@ export default function CityInsightsTabs({
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)]">
                         <Calendar className="w-3 h-3 text-sky-400" />
-                        <span>{item.data_publicacao}</span>
+                        <span>{formatarDataHoraBR(item.data_publicacao)}</span>
                       </div>
                       <h5 className="font-semibold text-xs text-[var(--text-main)] group-hover:text-sky-400 transition-colors line-clamp-2">
                         {item.titulo}

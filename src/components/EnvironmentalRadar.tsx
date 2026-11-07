@@ -27,7 +27,9 @@ import {
   TrendingUp,
   Globe,
   Compass,
+  Calendar,
 } from "lucide-react";
+import { formatarIntervaloVigencia, formatarDataHoraBR } from "@/utils/dateFormat";
 
 interface EnvironmentalRadarProps {
   municipio: string;
@@ -234,6 +236,11 @@ export default function EnvironmentalRadar({
                 <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold">
                   Nível: {alertasCEMADEN[0].nivel}
                 </p>
+                {alertasCEMADEN[0].dataHoraCriacao && (
+                  <p className="text-[10px] text-[var(--text-muted)]">
+                    Emitido: {formatarDataHoraBR(alertasCEMADEN[0].dataHoraCriacao)}
+                  </p>
+                )}
               </div>
             ) : (
               <p className="text-xs text-[var(--text-muted)] leading-relaxed">
@@ -387,8 +394,9 @@ export default function EnvironmentalRadar({
               <h3 className="text-xl font-bold text-[var(--text-main)]">
                 {alertaSelecionado.evento}
               </h3>
-              <p className="text-xs text-[var(--text-muted)]">
-                Vigência: de {alertaSelecionado.inicio} até {alertaSelecionado.fim}
+              <p className="text-xs text-[var(--text-muted)] flex items-center gap-1.5 font-medium">
+                <Calendar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span>Vigência: {formatarIntervaloVigencia(alertaSelecionado.inicio, alertaSelecionado.fim)}</span>
               </p>
             </div>
 

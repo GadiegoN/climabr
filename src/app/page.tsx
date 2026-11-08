@@ -33,6 +33,7 @@ import { WeatherEffects } from "@/components/WeatherEffects";
 import { CityComparisonModal } from "@/components/CityComparisonModal";
 import { TimeCapsuleModal } from "@/components/TimeCapsuleModal";
 import { Footer } from "@/components/Footer";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { CloudSunRain, AlertCircle, Info, Sparkles } from "lucide-react";
 
 const HISTORICO_LOCALSTORAGE_KEY = "climabr_cidades_recentes";
@@ -630,6 +631,9 @@ function WeatherAppContent() {
           onClose={() => setIsCapsulaAberta(false)}
         />
       )}
+
+      {/* Prompt / Banner de Instalação PWA */}
+      <PWAInstallPrompt />
 
       {/* Rodapé Executivo Institucional */}
       <Footer />

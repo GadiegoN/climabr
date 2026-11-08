@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { DadosClimaCidade } from "@/types/weather";
 import { mapearCodigoClima } from "@/utils/weatherCodes";
-import { baixarPrevisaoComoPNG } from "@/utils/canvasExport";
+import { baixarPrevisaoComoPNG, gerarImagemPrevisaoPNG } from "@/utils/canvasExport";
 import { WeatherIcon } from "./WeatherIcon";
 import {
   X,
@@ -30,11 +30,21 @@ interface ShareModalProps {
 export function ShareModal({ cidade, isOpen, onClose }: ShareModalProps) {
   const [copiado, setCopiado] = useState(false);
   const [baixandoPNG, setBaixandoPNG] = useState(false);
+  const [compartilhandoNativo, setCompartilhandoNativo] = useState(false);
   const [baixadoSucesso, setBaixadoSucesso] = useState(false);
+  const [suportaShareArquivo, setSuportaShareArquivo] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    if (typeof navigator !== "undefined" && typeof navigator.canShare === "function") {
+      try {
+        const dummyFile = new File(["test"], "test.png", { type: "image/png" });
+        setSuportaShareArquivo(navigator.canShare({ files: [dummyFile] }));
+      } catch {
+        setSuportaShareArquivo(false);
+      }
+    }
   }, []);
 
   if (!isOpen || !mounted) return null;
@@ -62,6 +72,36 @@ export function ShareModal({ cidade, isOpen, onClose }: ShareModalProps) {
       setTimeout(() => setCopiado(false), 2500);
     } catch {
       // Fallback
+    }
+  };
+
+  const handleCompartilharNativo = async () => {
+    setCompartilhandoNativo(true);
+    try {
+      const dataUrl = gerarImagemPrevisaoPNG(cidade, condicao);
+      if (!dataUrl) {
+        setCompartilhandoNativo(false);
+        return;
+      }
+
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const nomeArquivo = `climabr-${cidade.municipio.toLowerCase().replace(/\s+/g, "-")}.png`;
+      const file = new File([blob], nomeArquivo, { type: "image/png" });
+
+      if (navigator.share) {
+        await navigator.share({
+          files: [file],
+          title: `Previsão do Tempo em ${cidade.municipio} - ${cidade.uf}`,
+          text: textoWhatsApp,
+        });
+      }
+    } catch (err) {
+      if ((err as Error)?.name !== "AbortError") {
+        console.error("Erro ao compartilhar nativamente:", err);
+      }
+    } finally {
+      setCompartilhandoNativo(false);
     }
   };
 
@@ -157,6 +197,28 @@ export function ShareModal({ cidade, isOpen, onClose }: ShareModalProps) {
 
         {/* Botões de Ação para Compartilhar & Baixar */}
         <div className="space-y-2 sm:space-y-2.5 pt-1">
+          {/* 📲 Compartilhamento Direto de Arquivo no WhatsApp/Redes (Mobile) */}
+          {suportaShareArquivo && (
+            <button
+              type="button"
+              onClick={handleCompartilharNativo}
+              disabled={compartilhandoNativo}
+              className="w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-600/25 active:scale-98 cursor-pointer disabled:opacity-70"
+            >
+              {compartilhandoNativo ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                  <span className="truncate">Preparando Imagem HD...</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Enviar Imagem no WhatsApp / Stories</span>
+                </>
+              )}
+            </button>
+          )}
+
           {/* 📸 Botão Baixar Imagem PNG */}
           <button
             type="button"

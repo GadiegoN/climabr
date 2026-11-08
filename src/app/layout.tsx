@@ -20,11 +20,27 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://climabr-two.vercel.app"),
   title: "ClimaBR - Previsão do Tempo para Municípios Brasileiros",
   description:
-    "Consulte a previsão meteorológica em tempo real, curva térmica 24h, radiação UV e dados oficiais de qualquer município do Brasil.",
+    "Consulte a previsão meteorológica em tempo real, curva térmica 24h, radiação UV e dados oficiais de qualquer município do Brasil sem anúncios invasivos.",
   manifest: "/manifest.webmanifest",
   applicationName: "ClimaBR",
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "https://climabr-two.vercel.app",
+    siteName: "ClimaBR",
+    title: "ClimaBR - Previsão do Tempo para Municípios Brasileiros",
+    description:
+      "Previsão meteorológica limpa, rápida e sem anúncios invasivos para os 5.570 municípios do Brasil com dados do IBGE e INMET.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ClimaBR - Previsão do Tempo para Municípios Brasileiros",
+    description:
+      "Previsão meteorológica limpa, rápida e sem anúncios invasivos para os 5.570 municípios do Brasil.",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

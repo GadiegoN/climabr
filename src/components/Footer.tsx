@@ -15,6 +15,7 @@ import {
   Globe,
   Info,
   Lock,
+  Smartphone,
 } from "lucide-react";
 import { PrivacyModal } from "./PrivacyModal";
 
@@ -140,6 +141,10 @@ export function Footer() {
               <li className="flex items-center gap-1.5 hover:text-[var(--text-main)] transition-colors">
                 <Hourglass className="w-3 h-3 text-purple-400 shrink-0" />
                 <span>Cápsula do Tempo Histórica</span>
+              </li>
+              <li className="flex items-center gap-1.5 hover:text-[var(--text-main)] transition-colors">
+                <Smartphone className="w-3 h-3 text-emerald-400 shrink-0" />
+                <span>Aplicativo PWA Offline</span>
               </li>
             </ul>
           </div>

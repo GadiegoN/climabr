@@ -602,11 +602,13 @@ export function WeatherCard({
         </div>
       )}
 
-      {/* 🏛️ Sobre a Cidade (Abas Unificadas: Mapa Interativo, História Wikipedia, Notícias IBGE e Litoral) */}
+      {/* 🏛️ Sobre a Cidade (Abas Unificadas: Mapa Interativo, História Wikipedia, Notícias IBGE, Anúncios e Litoral) */}
       <CityInsightsTabs
         coordenadas={data.coordenadas}
         municipio={data.municipio}
         uf={data.uf}
+        temperatura={data.clima.temperature}
+        weatherCode={data.clima.weathercode}
         wikipedia={data.wikipedia}
         noticiasIBGE={data.noticiasIBGE}
         favoritos={favoritos}

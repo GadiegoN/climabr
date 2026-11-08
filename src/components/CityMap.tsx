@@ -133,10 +133,11 @@ export function CityMap({
     const L = (window as any).L;
 
     if (!mapInstanceRef.current) {
+      const zoomInicial = modo === "radar" ? 7 : 11;
       const map = L.map(mapContainerRef.current, {
         zoomControl: false,
         attributionControl: false,
-      }).setView([latitude, longitude], 11);
+      }).setView([latitude, longitude], zoomInicial);
 
       // Camada de Tiles oficiais OpenStreetMap (100% gratuita, sem API key)
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -235,8 +236,9 @@ export function CityMap({
       });
     });
 
-    map.setView([latitude, longitude], 11);
-  }, [mapCarregado, latitude, longitude, municipio, uf, favoritosComCoords, onSelecionarCidade]);
+    const zoomDesejado = modo === "radar" ? 7 : 11;
+    map.setView([latitude, longitude], zoomDesejado);
+  }, [mapCarregado, latitude, longitude, municipio, uf, favoritosComCoords, onSelecionarCidade, modo]);
 
   // 4. Integração com a API do RainViewer para Radar de Chuva em Tempo Real
   const carregarRadar = useCallback(async () => {
@@ -298,6 +300,8 @@ export function CityMap({
       radarLayerRef.current = L.tileLayer(tileUrl, {
         opacity: 0.72,
         zIndex: 50,
+        maxNativeZoom: 7,
+        maxZoom: 18,
       }).addTo(map);
     } else {
       radarLayerRef.current.setUrl(tileUrl);
@@ -318,7 +322,8 @@ export function CityMap({
   // Controles de Ação do Mapa
   const handleFocarAtual = () => {
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo([latitude, longitude], 12, { duration: 1 });
+      const zoomDesejado = modo === "radar" ? 7 : 11;
+      mapInstanceRef.current.flyTo([latitude, longitude], zoomDesejado, { duration: 1 });
     }
   };
 
@@ -434,7 +439,7 @@ export function CityMap({
                 setModo("radar");
                 setIsPlaying(true);
                 if (mapInstanceRef.current) {
-                  mapInstanceRef.current.setView([latitude, longitude], 9);
+                  mapInstanceRef.current.setView([latitude, longitude], 7);
                 }
               }}
               className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${

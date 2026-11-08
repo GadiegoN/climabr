@@ -32,6 +32,7 @@ import { WeatherSkeleton } from "@/components/WeatherSkeleton";
 import { WeatherEffects } from "@/components/WeatherEffects";
 import { CityComparisonModal } from "@/components/CityComparisonModal";
 import { TimeCapsuleModal } from "@/components/TimeCapsuleModal";
+import { Footer } from "@/components/Footer";
 import { CloudSunRain, AlertCircle, Info, Sparkles } from "lucide-react";
 
 const HISTORICO_LOCALSTORAGE_KEY = "climabr_cidades_recentes";
@@ -627,18 +628,8 @@ function WeatherAppContent() {
         />
       )}
 
-      {/* Rodapé Informativo */}
-      <footer
-        style={{
-          borderColor: "var(--card-border)",
-          color: "var(--text-muted)",
-        }}
-        className="text-center py-5 sm:py-6 text-[11px] sm:text-xs border-t mt-8 sm:mt-12 transition-colors px-2"
-      >
-        <p>
-          Construído com Next.js 14+ (App Router), TypeScript e Tailwind CSS. Integração com IBGE, Open-Meteo, Wikipedia e INMET.
-        </p>
-      </footer>
+      {/* Rodapé Executivo Institucional */}
+      <Footer />
     </main>
   );
 }

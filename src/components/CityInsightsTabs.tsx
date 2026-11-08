@@ -1,15 +1,43 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Coordenadas, WikipediaResumo, NoticiaIBGE, CidadeHistorico, CondicoesMarinhas } from "@/types/weather";
 import { CityMap } from "@/components/CityMap";
-import { Map, BookOpen, Newspaper, ExternalLink, Calendar, Compass, Building2, Waves, LifeBuoy, Timer, Thermometer, Anchor, Megaphone, Sparkles } from "lucide-react";
+import {
+  Map,
+  BookOpen,
+  Newspaper,
+  ExternalLink,
+  Calendar,
+  Compass,
+  Building2,
+  Waves,
+  LifeBuoy,
+  Timer,
+  Thermometer,
+  Anchor,
+  Megaphone,
+  Sparkles,
+  Globe,
+  Zap,
+  Utensils,
+  Coffee,
+  Sun,
+  Snowflake,
+  MessageCircle,
+  Tag,
+  CheckCircle2,
+  X,
+} from "lucide-react";
 import { formatarDataHoraBR } from "@/utils/dateFormat";
 
 interface CityInsightsTabsProps {
   coordenadas: Coordenadas;
   municipio: string;
   uf: string;
+  temperatura?: number;
+  weatherCode?: number;
   wikipedia?: WikipediaResumo;
   noticiasIBGE?: NoticiaIBGE[];
   favoritos?: CidadeHistorico[];
@@ -18,11 +46,14 @@ interface CityInsightsTabsProps {
 }
 
 type TabTipo = "mapa" | "historia" | "noticias" | "anuncios" | "litoral";
+type FiltroAnuncio = "todos" | "nacional" | "estadual" | "local" | "frio" | "calor";
 
 export default function CityInsightsTabs({
   coordenadas,
   municipio,
   uf,
+  temperatura,
+  weatherCode,
   wikipedia,
   noticiasIBGE = [],
   favoritos = [],
@@ -30,6 +61,14 @@ export default function CityInsightsTabs({
   onSelecionarCidade,
 }: CityInsightsTabsProps) {
   const [tabAtiva, setTabAtiva] = useState<TabTipo>("mapa");
+  const [filtroAnuncio, setFiltroAnuncio] = useState<FiltroAnuncio>("todos");
+  const [mounted, setMounted] = useState(false);
+  const [isModalAnunciarAberto, setIsModalAnunciarAberto] = useState(false);
+  const [enviadoFeedback, setEnviadoFeedback] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const cardStyle = {
     backgroundColor: "var(--card-bg)",
@@ -246,30 +285,489 @@ export default function CityInsightsTabs({
           </div>
         )}
 
-        {/* ABA: ANÚNCIOS & OPORTUNIDADES LOCAIS */}
-        {tabAtiva === "anuncios" && (
-          <div className="space-y-4">
-            <div className="p-8 sm:p-10 rounded-3xl bg-black/5 dark:bg-white/[0.02] border border-dashed border-[var(--card-border)] text-center flex flex-col items-center justify-center space-y-3.5">
-              <div className="w-14 h-14 rounded-2xl bg-sky-500/10 text-sky-400 flex items-center justify-center border border-sky-500/20 shadow-sm">
-                <Megaphone className="w-7 h-7" />
+        {/* ABA: ANÚNCIOS & OPORTUNIDADES LOCAIS (MOCK MULTI-SEGMENTAÇÃO) */}
+        {tabAtiva === "anuncios" && (() => {
+          const tempNum = temperatura !== undefined ? Math.round(temperatura) : 24;
+
+          const isChovendo = weatherCode !== undefined && [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(weatherCode);
+          const condicaoFrio = tempNum <= 22 || isChovendo;
+          const condicaoCalor = tempNum >= 26 && !isChovendo;
+
+          const mockAnuncios = [
+            {
+              id: "anuncio-nacional",
+              tipo: "nacional" as FiltroAnuncio,
+              categoria: "Seguro & Viagem",
+              tipoBadge: "🇧🇷 Brasil Inteiro (Nacional)",
+              badgeClasse: "badge-sky",
+              anunciante: "ClimaProtect Seguros",
+              titulo: "Seguro Residencial & Viagem com Proteção Meteorológica",
+              descricao: "Proteja sua residência e suas viagens contra temporais, vendavais e cancelamentos por eventos climáticos extremos. Cobertura completa em todo o Brasil.",
+              icone: <Globe className="w-5 h-5 text-sky-400" />,
+              corFundo: "bg-sky-500/10 border-sky-500/25",
+              ctaTexto: "Conhecer Cobertura Nacional",
+              ctaLink: "#",
+              isWhatsapp: false,
+              ativoAgora: true,
+            },
+            {
+              id: "anuncio-estadual",
+              tipo: "estadual" as FiltroAnuncio,
+              categoria: "Energia Solar & Sustentabilidade",
+              tipoBadge: `📍 Estado de ${uf} (Regional)`,
+              badgeClasse: "badge-amber",
+              anunciante: `Rede Solar ${uf} Fotovoltaica`,
+              titulo: `Economize até 95% na conta de luz com Energia Solar em ${uf}`,
+              descricao: `Aproveite a alta taxa de irradiação solar no estado de ${uf}. Instalação rápida para residências, fazendas e comércios com parcelamento em até 60x.`,
+              icone: <Zap className="w-5 h-5 text-amber-400" />,
+              corFundo: "bg-amber-500/10 border-amber-500/25",
+              ctaTexto: `Simular Economia em ${uf}`,
+              ctaLink: "#",
+              isWhatsapp: false,
+              ativoAgora: true,
+            },
+            {
+              id: "anuncio-local",
+              tipo: "local" as FiltroAnuncio,
+              categoria: "Gastronomia & Delivery Local",
+              tipoBadge: `🎯 Exclusivo em ${municipio} - ${uf} (Hiperlocal)`,
+              badgeClasse: "badge-emerald",
+              anunciante: `Pizzaria & Choperia Villa ${municipio}`,
+              titulo: `Tradição em massas artesanais e forno a lenha no centro de ${municipio}`,
+              descricao: `Delivery expresso para todos os bairros de ${municipio}. Massa leve de fermentação natural. Peça hoje e ganhe sobremesa grátis no primeiro pedido!`,
+              icone: <Utensils className="w-5 h-5 text-emerald-400" />,
+              corFundo: "bg-emerald-500/10 border-emerald-500/25",
+              ctaTexto: "Pedir pelo WhatsApp",
+              ctaLink: `https://api.whatsapp.com/send?text=Olá! Vi o anúncio da Villa ${encodeURIComponent(municipio)} no ClimaBR e gostaria de ver o cardápio.`,
+              isWhatsapp: true,
+              ativoAgora: true,
+            },
+            {
+              id: "anuncio-frio",
+              tipo: "frio" as FiltroAnuncio,
+              categoria: "Conforto & Cafeteria (Gatilho Climático)",
+              tipoBadge: `❄️ Ativado no Frio & Chuva (< 21°C)`,
+              badgeClasse: "badge-purple",
+              anunciante: "Empório dos Caldos & Cafés Gourmet",
+              titulo: "Tempo frio ou chuvoso? Aquecemos seu dia com fondue e cafés especiais",
+              descricao: `Ideal para quando a temperatura cai em ${municipio}: sopas artesanais, chocolates quentes suíços e grãos selecionados entregues na sua porta com embalagem térmica.`,
+              icone: <Coffee className="w-5 h-5 text-purple-400" />,
+              corFundo: "bg-purple-500/10 border-purple-500/25",
+              ctaTexto: "Ver Cardápio de Inverno",
+              ctaLink: "#",
+              isWhatsapp: false,
+            },
+            {
+              id: "anuncio-calor",
+              tipo: "calor" as FiltroAnuncio,
+              categoria: "Lazer & Refrescância (Gatilho Climático)",
+              tipoBadge: `☀️ Ativado no Calor & Sol (> 26°C)`,
+              badgeClasse: "badge-orange",
+              anunciante: "Gelateria & Parque das Águas Sol & Verão",
+              titulo: "O calor chegou: refresque seu dia com sorvetes artesanais e piscina",
+              descricao: `Dias de sol forte e calor em ${municipio} pedem gelato 100% natural, açaí premium e passaporte promocional para lazer e piscinas com a família.`,
+              icone: <Sun className="w-5 h-5 text-orange-400" />,
+              corFundo: "bg-orange-500/10 border-orange-500/25",
+              ctaTexto: "Garantir Desconto de Verão",
+              ctaLink: "#",
+              isWhatsapp: false,
+            },
+          ];
+
+          const anunciosFiltrados = filtroAnuncio === "todos"
+            ? mockAnuncios
+            : mockAnuncios.filter((a) => a.tipo === filtroAnuncio);
+
+          return (
+            <div className="space-y-4">
+              {/* Header Explicativo com Filtros Interativos do Mock */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-black/5 dark:bg-white/[0.03] border border-[var(--card-border)] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--card-border)] pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                    <h4 className="text-xs sm:text-sm font-bold text-[var(--text-main)]">
+                      Mock do Sistema Inteligente de Anúncios do ClimaBR
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-[var(--text-muted)]">
+                    Filtre para visualizar os diferentes tipos de segmentação:
+                  </span>
+                </div>
+
+                {/* Filtros em Pílulas */}
+                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 flex-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => setFiltroAnuncio("todos")}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                      filtroAnuncio === "todos"
+                        ? "bg-sky-500 text-white shadow-sm"
+                        : "bg-black/10 dark:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                    }`}
+                  >
+                    Todos ({mockAnuncios.length})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFiltroAnuncio("nacional")}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                      filtroAnuncio === "nacional"
+                        ? "bg-sky-500 text-white shadow-sm"
+                        : "bg-black/10 dark:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                    }`}
+                  >
+                    🇧🇷 Brasil Inteiro
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFiltroAnuncio("estadual")}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                      filtroAnuncio === "estadual"
+                        ? "bg-amber-500 text-white shadow-sm"
+                        : "bg-black/10 dark:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                    }`}
+                  >
+                    📍 Estado ({uf})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFiltroAnuncio("local")}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                      filtroAnuncio === "local"
+                        ? "bg-emerald-500 text-white shadow-sm"
+                        : "bg-black/10 dark:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                    }`}
+                  >
+                    🎯 Cidade ({municipio})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFiltroAnuncio("frio")}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                      filtroAnuncio === "frio"
+                        ? "bg-purple-500 text-white shadow-sm"
+                        : "bg-black/10 dark:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                    }`}
+                  >
+                    ❄️ Clima Frio
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFiltroAnuncio("calor")}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                      filtroAnuncio === "calor"
+                        ? "bg-orange-500 text-white shadow-sm"
+                        : "bg-black/10 dark:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                    }`}
+                  >
+                    ☀️ Clima Calor
+                  </button>
+                </div>
               </div>
-              <div className="space-y-1.5 max-w-md">
-                <h4 className="text-base sm:text-lg font-bold text-[var(--text-main)]">
-                  Espaço para Anúncios & Negócios Locais
-                </h4>
-                <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">
-                  Em breve: espaço dedicado para divulgação de comércio, serviços, turismo e eventos em <strong>{municipio} - {uf}</strong> e região.
-                </p>
+
+              {/* Lista dos Cards de Anúncio Mockados */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {anunciosFiltrados.map((anuncio) => (
+                  <div
+                    key={anuncio.id}
+                    className={`p-4 rounded-2xl border ${anuncio.corFundo} backdrop-blur-md flex flex-col justify-between space-y-3 transition-all hover:-translate-y-0.5 shadow-sm`}
+                  >
+                    <div className="space-y-2">
+                      {/* Topo do Card: Badge do Tipo e Categoria */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className={`${anuncio.badgeClasse} px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-wider`}>
+                          {anuncio.tipoBadge}
+                        </span>
+                        <span className="text-[10px] text-[var(--text-muted)] font-medium">
+                          Patrocinado • {anuncio.categoria}
+                        </span>
+                      </div>
+
+                      {/* Header da Marca & Título */}
+                      <div className="flex items-start gap-3 pt-1">
+                        <div className="p-2 rounded-xl bg-black/10 dark:bg-white/10 shrink-0 mt-0.5">
+                          {anuncio.icone}
+                        </div>
+                        <div className="space-y-0.5 min-w-0">
+                          <p className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider truncate">
+                            {anuncio.anunciante}
+                          </p>
+                          <h5 className="text-sm font-bold text-[var(--text-main)] leading-snug">
+                            {anuncio.titulo}
+                          </h5>
+                        </div>
+                      </div>
+
+                      {/* Descrição do Produto ou Serviço */}
+                      <p className="text-xs text-[var(--text-muted)] leading-relaxed pt-1">
+                        {anuncio.descricao}
+                      </p>
+                    </div>
+
+                    {/* Botão de Ação / CTA Demonstrativo (Sem Ação Externa) */}
+                    <div className="pt-2 border-t border-[var(--card-border)] flex items-center justify-between gap-3">
+                      <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                        Exemplo Demonstrativo
+                      </span>
+
+                      <button
+                        type="button"
+                        className={`px-3.5 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-all select-none cursor-default shrink-0 ${
+                          anuncio.isWhatsapp
+                            ? "bg-emerald-600/90 text-white"
+                            : "bg-black/10 dark:bg-white/10 text-[var(--text-main)]"
+                        }`}
+                      >
+                        {anuncio.isWhatsapp ? (
+                          <>
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>{anuncio.ctaTexto}</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>{anuncio.ctaTexto}</span>
+                            <ExternalLink className="w-3 h-3 text-[var(--text-muted)]" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="pt-2 flex items-center gap-2">
-                <span className="badge-sky text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Espaço Publicitário Reservado</span>
-                </span>
+
+              {/* Banner de Captação para Novos Anunciantes Locais */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-sky-500/10 to-purple-500/10 border border-emerald-500/25 flex flex-col sm:flex-row items-center justify-between gap-3.5 text-center sm:text-left">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <Megaphone className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <h5 className="font-extrabold text-sm text-[var(--text-main)]">
+                      Quer divulgar sua empresa em {municipio} ou no estado de {uf}?
+                    </h5>
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Tenha visibilidade diária para moradores, produtores rurais e turistas que consultam a previsão meteorológica no ClimaBR.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModalAnunciarAberto(true);
+                    setEnviadoFeedback(false);
+                  }}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-500/25 shrink-0 cursor-pointer"
+                >
+                  <Megaphone className="w-4 h-4" />
+                  <span>Anunciar no ClimaBR</span>
+                </button>
               </div>
+
+              {/* Modal / Dialog com Formulário de Anúncio Demonstrativo */}
+              {isModalAnunciarAberto && mounted && createPortal(
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-fadeIn"
+                  onClick={() => setIsModalAnunciarAberto(false)}
+                >
+                  <div
+                    style={cardStyle}
+                    className="relative w-full max-w-lg rounded-2xl sm:rounded-3xl border border-white/20 p-4 sm:p-6 md:p-7 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Botão Fechar */}
+                    <button
+                      type="button"
+                      onClick={() => setIsModalAnunciarAberto(false)}
+                      className="absolute top-4 right-4 p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+
+                    {/* Header do Formulário */}
+                    <div className="space-y-1 pr-8">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shrink-0">
+                          <Megaphone className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-base sm:text-lg font-bold text-[var(--text-main)]">
+                          Anunciar no ClimaBR
+                        </h3>
+                      </div>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Preencha os dados do seu negócio para simular uma proposta comercial.
+                      </p>
+                    </div>
+
+                    {enviadoFeedback ? (
+                      <div className="p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-3 animate-fadeIn">
+                        <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+                          <CheckCircle2 className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-sm text-[var(--text-main)]">
+                            Simulação de Proposta Enviada!
+                          </h4>
+                          <p className="text-xs text-[var(--text-muted)]">
+                            Este é um formulário de teste/demonstração. Nenhuma mensagem ou disparo externo foi realizado.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsModalAnunciarAberto(false)}
+                          className="px-4 py-2 rounded-xl bg-emerald-500 text-white font-bold text-xs hover:bg-emerald-600 transition-all cursor-pointer"
+                        >
+                          Concluir
+                        </button>
+                      </div>
+                    ) : (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          setEnviadoFeedback(true);
+                        }}
+                        className="space-y-3.5"
+                      >
+                        {/* Nome da Empresa / Responsável */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-[var(--text-main)]">
+                            Nome da Empresa ou Marca
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Pousada Recanto, Restaurante Central..."
+                            defaultValue=""
+                            style={{
+                              backgroundColor: "var(--input-bg)",
+                              borderColor: "var(--input-border)",
+                              color: "var(--input-text)",
+                            }}
+                            className="w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          />
+                        </div>
+
+                        {/* Ramo e Segmentação */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold text-[var(--text-main)]">
+                              Segmentação Desejada
+                            </label>
+                            <select
+                              defaultValue="local"
+                              style={{
+                                backgroundColor: "var(--input-bg)",
+                                borderColor: "var(--input-border)",
+                                color: "var(--input-text)",
+                              }}
+                              className="w-full px-3 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            >
+                              <option value="local">🎯 Cidade ({municipio} - {uf})</option>
+                              <option value="estadual">📍 Estado ({uf})</option>
+                              <option value="nacional">🇧🇷 Brasil Inteiro</option>
+                              <option value="clima">⚡ Gatilho de Clima (Chuva/Calor)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold text-[var(--text-main)]">
+                              Ramo de Atuação
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Ex: Alimentação, Solar, Agro..."
+                              style={{
+                                backgroundColor: "var(--input-bg)",
+                                borderColor: "var(--input-border)",
+                                color: "var(--input-text)",
+                              }}
+                              className="w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Contato */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold text-[var(--text-main)]">
+                              Telefone / WhatsApp
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="(00) 00000-0000"
+                              style={{
+                                backgroundColor: "var(--input-bg)",
+                                borderColor: "var(--input-border)",
+                                color: "var(--input-text)",
+                              }}
+                              className="w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold text-[var(--text-main)]">
+                              E-mail Comercial
+                            </label>
+                            <input
+                              type="email"
+                              placeholder="contato@empresa.com.br"
+                              style={{
+                                backgroundColor: "var(--input-bg)",
+                                borderColor: "var(--input-border)",
+                                color: "var(--input-text)",
+                              }}
+                              className="w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Mensagem / Proposta */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-[var(--text-main)]">
+                            Mensagem ou Observações
+                          </label>
+                          <textarea
+                            rows={3}
+                            placeholder="Descreva seu produto ou serviço e como gostaria de divulgar..."
+                            style={{
+                              backgroundColor: "var(--input-bg)",
+                              borderColor: "var(--input-border)",
+                              color: "var(--input-text)",
+                            }}
+                            className="w-full px-3.5 py-2.5 rounded-xl border text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                          />
+                        </div>
+
+                        {/* Rodapé com botão sem ação externa */}
+                        <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => setIsModalAnunciarAberto(false)}
+                            className="px-4 py-2.5 rounded-xl bg-black/10 dark:bg-white/10 hover:bg-black/15 text-xs font-semibold text-[var(--text-muted)] cursor-pointer text-center"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-md shadow-emerald-500/25 cursor-pointer text-center"
+                          >
+                            Enviar Proposta (Simulação)
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                  </div>
+                </div>,
+                document.body
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ABA 4: CONDIÇÕES MARINHAS & LITORAL (Condicional) */}
         {tabAtiva === "litoral" && condicoesMarinhas && (

@@ -321,14 +321,17 @@ function WeatherAppContent() {
         const paramCidadeId = searchParams.get("cidadeId");
         const paramCidadeNome = searchParams.get("cidade");
 
-        if (paramUf) {
-          setEstadoSelecionado(paramUf);
-          const cidadesDaUf = await getMunicipiosPorUF(paramUf);
+        if (paramUf && /^[A-Za-z]{2}$/.test(paramUf)) {
+          const ufLimpa = paramUf.toUpperCase();
+          setEstadoSelecionado(ufLimpa);
+          const cidadesDaUf = await getMunicipiosPorUF(ufLimpa);
           setMunicipios(cidadesDaUf);
 
           if (paramCidadeId && paramCidadeNome) {
-            setCidadeSelecionadaId(paramCidadeId);
-            executarBusca(paramCidadeId, paramCidadeNome, paramUf);
+            const cidadeIdLimpa = paramCidadeId.replace(/[^a-zA-Z0-9-]/g, "");
+            const cidadeNomeLimpa = paramCidadeNome.replace(/[<>{}]/g, "").slice(0, 100);
+            setCidadeSelecionadaId(cidadeIdLimpa);
+            executarBusca(cidadeIdLimpa, cidadeNomeLimpa, ufLimpa);
           }
         }
       } catch (err) {

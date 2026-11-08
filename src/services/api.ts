@@ -127,7 +127,7 @@ export async function getCoordenadasMunicipio(idMunicipio: number | string): Pro
   const emCache = getCached<Coordenadas>(cacheKey, 86400000);
   if (emCache) return emCache;
 
-  const response = await fetch(`${IBGE_MALHAS_BASE}/municipios/${idMunicipio}/metadados`);
+  const response = await fetch(`${IBGE_MALHAS_BASE}/municipios/${encodeURIComponent(String(idMunicipio))}/metadados`);
   if (!response.ok) {
     throw new Error(`Falha ao obter coordenadas do município no IBGE`);
   }

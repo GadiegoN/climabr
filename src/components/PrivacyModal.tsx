@@ -13,6 +13,7 @@ import {
   EyeOff,
   Server,
   FileText,
+  Bell,
 } from "lucide-react";
 
 interface PrivacyModalProps {
@@ -53,6 +54,7 @@ export function PrivacyModal({
         localStorage.removeItem("climabr_favoritos");
         localStorage.removeItem("climabr_historico");
         localStorage.removeItem("climabr_theme");
+        localStorage.removeItem("climabr_notificacoes_config");
         sessionStorage.clear();
       } catch {
         // Ignora
@@ -172,6 +174,11 @@ export function PrivacyModal({
                   <td className="p-2.5">Manter sua preferência visual na próxima visita</td>
                 </tr>
                 <tr>
+                  <td className="p-2.5 font-medium text-[var(--text-main)]">Alertas Diários (08h e 20h)</td>
+                  <td className="p-2.5"><code>localStorage</code></td>
+                  <td className="p-2.5">Horários e cidade para notificações meteorológicas (100% opt-in)</td>
+                </tr>
+                <tr>
                   <td className="p-2.5 font-medium text-[var(--text-main)]">Cache de Previsão</td>
                   <td className="p-2.5"><code>sessionStorage</code></td>
                   <td className="p-2.5">Evitar requisições duplicadas. Apagado ao fechar a aba</td>
@@ -208,11 +215,38 @@ export function PrivacyModal({
           </div>
         </div>
 
-        {/* Seção 4: Serviços Externos & APIs Públicas */}
+        {/* Seção 4: Notificações Diárias & Alertas */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-bold flex items-center gap-2 text-[var(--text-main)]">
+            <Bell className="w-4 h-4 text-amber-400" />
+            <span>4. Notificações Diárias Agendadas (08h e 20h)</span>
+          </h3>
+          <div className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/[0.03] border border-[var(--card-border)] space-y-2 text-xs text-[var(--text-muted)] leading-relaxed">
+            <p>
+              O sistema de alertas meteorológicos do ClimaBR segue estritamente a LGPD (Lei 13.709/2018):
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-[11px] pl-1">
+              <li>
+                <strong>100% Opt-in (Consentimento Expresso):</strong> Nenhuma notificação é enviada sem que você clique e autorize ativamente no navegador.
+              </li>
+              <li>
+                <strong>Zero Coleta de Dados Pessoais:</strong> Não solicitamos e não armazenamos seu e-mail, telefone, CPF ou cadastro. O envio é anônimo e gerido no seu próprio navegador.
+              </li>
+              <li>
+                <strong>Horários Previsíveis:</strong> Apenas os resumos meteorológicos solicitados (às 08:00 e/ou às 20:00). Nunca enviamos propagandas ou spam.
+              </li>
+              <li>
+                <strong>Revogação Imediata (Opt-out):</strong> Você pode desativar as notificações com um clique a qualquer momento no botão de alertas ou limpando seus dados locais.
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Seção 5: Serviços Externos & APIs Públicas */}
         <div className="space-y-3">
           <h3 className="text-sm font-bold flex items-center gap-2 text-[var(--text-main)]">
             <Server className="w-4 h-4 text-emerald-400" />
-            <span>4. APIs Externas e Fontes Governamentais</span>
+            <span>5. APIs Externas e Fontes Governamentais</span>
           </h3>
           <p className="text-xs text-[var(--text-muted)] leading-relaxed">
             Para fornecer as previsões, dados agroclimáticos e alertas de desastres, o ClimaBR consulta fontes abertas e governamentais enviando apenas parâmetros geográficos públicos essenciais:

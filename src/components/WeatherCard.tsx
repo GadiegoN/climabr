@@ -7,8 +7,10 @@ import EnvironmentalRadar from "./EnvironmentalRadar";
 import CityInsightsTabs from "./CityInsightsTabs";
 import { ShareModal } from "./ShareModal";
 import { AgroModal } from "./AgroModal";
+import { NotificationModal } from "./NotificationModal";
 import { getFaseDaLua } from "@/utils/astronomy";
 import { gerarIndicesRotina, CategoriaRotina } from "@/utils/dailyTips";
+import { checarEAgendarNotificacaoAutomatica, getNotificacoesConfig } from "@/utils/notifications";
 import {
   MapPin,
   Wind,
@@ -34,6 +36,7 @@ import {
   Moon,
   Camera,
   Sprout,
+  Bell,
 } from "lucide-react";
 
 /**
@@ -160,9 +163,17 @@ export function WeatherCard({
 }: WeatherCardProps) {
   const [isShareModalAberto, setIsShareModalAberto] = useState(false);
   const [isAgroModalAberto, setIsAgroModalAberto] = useState(false);
+  const [isNotificationModalAberto, setIsNotificationModalAberto] = useState(false);
+  const [isNotificacaoAtiva, setIsNotificacaoAtiva] = useState(false);
   const [categoriaRotinaAtiva, setCategoriaRotinaAtiva] = useState<CategoriaRotina>("vestimenta");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const condicao = mapearCodigoClima(data.clima.weathercode, data.clima.is_day);
+
+  // Inicializa status de notificação e checa agendamento automático
+  useEffect(() => {
+    const cfg = getNotificacoesConfig();
+    setIsNotificacaoAtiva(cfg.ativa);
+  }, []);
 
   // Relógio ao vivo no fuso horário local do município
   const [agora, setAgora] = useState<Date>(() => new Date());
@@ -183,6 +194,22 @@ export function WeatherCard({
 
   // Índices de Rotina Diária (O que Vestir, Varal, Esportes, Lavar Carro)
   const hojePrevisao = data.previsaoDiaria?.[0];
+
+  // Verifica se é janela de 08h ou 20h para disparo automático
+  useEffect(() => {
+    if (data) {
+      checarEAgendarNotificacaoAutomatica(
+        data.municipio,
+        data.uf,
+        Math.round(data.clima.temperature),
+        condicao.descricao,
+        hojePrevisao ? Math.round(hojePrevisao.tempMax) : undefined,
+        hojePrevisao ? Math.round(hojePrevisao.tempMin) : undefined,
+        hojePrevisao?.probabilidadeChuva,
+        data.municipioId
+      );
+    }
+  }, [data, condicao.descricao, hojePrevisao]);
   const indicesRotina = gerarIndicesRotina({
     tempAtual: data.clima.temperature,
     tempMin: hojePrevisao ? hojePrevisao.tempMin : data.clima.temperature,
@@ -358,6 +385,24 @@ export function WeatherCard({
             >
               <Camera className="w-3.5 h-3.5 text-sky-300" />
               <span>Baixar / Compartilhar</span>
+            </button>
+
+            {/* Botão de Alertas e Notificações Diárias (08h e 20h) */}
+            <button
+              type="button"
+              onClick={() => setIsNotificationModalAberto(true)}
+              title="Configurar notificações diárias da previsão do tempo às 08h e 20h"
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md border text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm whitespace-nowrap ${
+                isNotificacaoAtiva
+                  ? "bg-emerald-500/30 border-emerald-400 text-emerald-200"
+                  : "bg-black/20 hover:bg-black/30 border-white/25"
+              }`}
+            >
+              <Bell className={`w-3.5 h-3.5 ${isNotificacaoAtiva ? "text-emerald-300 animate-pulse" : "text-amber-300"}`} />
+              <span>Alertas 08h / 20h</span>
+              {isNotificacaoAtiva && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              )}
             </button>
           </div>
         </div>
@@ -763,6 +808,14 @@ export function WeatherCard({
         cidade={data}
         isOpen={isAgroModalAberto}
         onClose={() => setIsAgroModalAberto(false)}
+      />
+
+      {/* 🔔 Modal de Alertas & Notificações Diárias (08h e 20h) */}
+      <NotificationModal
+        cidade={data}
+        isOpen={isNotificationModalAberto}
+        onClose={() => setIsNotificationModalAberto(false)}
+        onConfigChange={(ativa) => setIsNotificacaoAtiva(ativa)}
       />
     </div>
   );

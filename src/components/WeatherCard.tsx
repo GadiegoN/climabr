@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { DadosClimaCidade, CidadeHistorico, Coordenadas } from "@/types/weather";
 import { mapearCodigoClima } from "@/utils/weatherCodes";
 import { WeatherIcon } from "./WeatherIcon";
@@ -36,6 +36,109 @@ import {
   Sprout,
 } from "lucide-react";
 
+/**
+ * Identifica o fuso horário oficial IANA para qualquer localidade brasileira.
+ * Usa o fuso oficial retornado pela Open-Meteo com fallback geográfico por UF/Município.
+ */
+function resolverFusoHorario(uf: string, municipio: string, timezoneApi?: string): string {
+  if (timezoneApi && timezoneApi.includes("/")) return timezoneApi;
+
+  const ufNorm = (uf || "").toUpperCase().trim();
+  const munNorm = (municipio || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  // Fernando de Noronha (PE) -> UTC-2
+  if (ufNorm === "PE" && munNorm.includes("noronha")) return "America/Noronha";
+
+  // Acre -> UTC-5
+  if (ufNorm === "AC") return "America/Rio_Branco";
+
+  // Amazonas: extremo oeste (UTC-5) vs demais cidades (UTC-4)
+  if (ufNorm === "AM") {
+    const municipiosAcre = [
+      "atalaia do norte",
+      "benjamin constant",
+      "boca do acre",
+      "eirunepe",
+      "envira",
+      "guajara",
+      "ipixuna",
+      "itamarati",
+      "jurua",
+      "labrea",
+      "pauini",
+      "sao paulo de olivenca",
+      "tabatinga",
+    ];
+    if (municipiosAcre.some((m) => munNorm.includes(m))) {
+      return "America/Rio_Branco";
+    }
+    return "America/Manaus";
+  }
+
+  // Estados no fuso UTC-4
+  if (["RO", "RR", "MT", "MS"].includes(ufNorm)) {
+    if (ufNorm === "MT") return "America/Cuiaba";
+    if (ufNorm === "MS") return "America/Campo_Grande";
+    if (ufNorm === "RR") return "America/Boa_Vista";
+    return "America/Porto_Velho";
+  }
+
+  // Padrão nacional (Horário de Brasília - UTC-3)
+  return "America/Sao_Paulo";
+}
+
+function formatarHoraAoVivo(data: Date, timeZone: string): string {
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      timeZone,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).format(data);
+  } catch {
+    return data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+}
+
+function extrairInfoFuso(timeZone: string, utcOffsetSeconds?: number): { utcLabel: string; relacaoBrasilia: string } {
+  let offsetHoras: number;
+  if (typeof utcOffsetSeconds === "number") {
+    offsetHoras = Math.round(utcOffsetSeconds / 3600);
+  } else if (timeZone.includes("Noronha")) {
+    offsetHoras = -2;
+  } else if (timeZone.includes("Rio_Branco")) {
+    offsetHoras = -5;
+  } else if (
+    timeZone.includes("Manaus") ||
+    timeZone.includes("Porto_Velho") ||
+    timeZone.includes("Cuiaba") ||
+    timeZone.includes("Boa_Vista") ||
+    timeZone.includes("Campo_Grande")
+  ) {
+    offsetHoras = -4;
+  } else {
+    offsetHoras = -3;
+  }
+
+  const difBrasilia = offsetHoras - -3;
+  let relacao = "Horário de Brasília";
+  if (difBrasilia < 0) {
+    relacao = `${Math.abs(difBrasilia)}h a menos que Brasília`;
+  } else if (difBrasilia > 0) {
+    relacao = `${difBrasilia}h a mais que Brasília`;
+  }
+
+  const sinal = offsetHoras >= 0 ? `+${offsetHoras}` : `${offsetHoras}`;
+  return {
+    utcLabel: `UTC${sinal}`,
+    relacaoBrasilia: relacao,
+  };
+}
+
 interface WeatherCardProps {
   data: DadosClimaCidade;
   isFavorito?: boolean;
@@ -60,6 +163,20 @@ export function WeatherCard({
   const [categoriaRotinaAtiva, setCategoriaRotinaAtiva] = useState<CategoriaRotina>("vestimenta");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const condicao = mapearCodigoClima(data.clima.weathercode, data.clima.is_day);
+
+  // Relógio ao vivo no fuso horário local do município
+  const [agora, setAgora] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setAgora(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const fusoIana = resolverFusoHorario(data.uf, data.municipio, data.clima.timezone);
+  const horaLocalAoVivo = formatarHoraAoVivo(agora, fusoIana);
+  const infoFuso = extrairInfoFuso(fusoIana, data.clima.utcOffsetSeconds);
 
   // Dados astronômicos da Lua
   const faseLua = getFaseDaLua();
@@ -161,10 +278,28 @@ export function WeatherCard({
                   </button>
                 )}
               </div>
-              <p className="text-white/80 text-xs sm:text-sm mt-1 flex items-center gap-1.5 font-medium">
-                <Calendar className="w-4 h-4 opacity-80" />
-                Atualizado em: {dataFormatada}
-              </p>
+              {/* Metadados: Relógio Local ao Vivo + Horário da Medição Meteorológica */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 mt-2">
+                {/* Relógio em Tempo Real no Fuso Horário do Município */}
+                <div
+                  title={`Horário local oficial em ${data.municipio} (${infoFuso.utcLabel})`}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl bg-black/30 hover:bg-black/40 backdrop-blur-md border border-white/20 text-white text-xs sm:text-sm font-semibold shadow-sm transition-all select-none"
+                >
+                  <Clock className="w-3.5 h-3.5 text-emerald-300 animate-pulse shrink-0" />
+                  <span className="font-mono tracking-tight text-emerald-200 font-bold">
+                    {horaLocalAoVivo}
+                  </span>
+                  <span className="text-[10px] sm:text-[11px] text-white/80 font-medium border-l border-white/25 pl-1.5 whitespace-nowrap">
+                    {infoFuso.utcLabel} • {infoFuso.relacaoBrasilia}
+                  </span>
+                </div>
+
+                {/* Momento da medição da estação */}
+                <p className="text-white/75 text-[11px] sm:text-xs flex items-center gap-1 font-medium whitespace-nowrap">
+                  <Calendar className="w-3.5 h-3.5 opacity-70 shrink-0" />
+                  <span>Medição: {dataFormatada}</span>
+                </p>
+              </div>
             </div>
 
             {/* Badge da Condição Climática */}

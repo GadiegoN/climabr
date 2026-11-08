@@ -59,6 +59,9 @@ export interface OpenMeteoCurrentWeather {
   precipitation?: number;
   nascerDoSol?: string;
   porDoSol?: string;
+  timezone?: string;
+  timezoneAbbreviation?: string;
+  utcOffsetSeconds?: number;
 }
 
 export interface PrevisaoDiariaItem {

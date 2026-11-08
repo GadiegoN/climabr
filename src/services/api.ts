@@ -230,6 +230,9 @@ export async function getClimaCompleto(
     precipitation: current?.precipitation,
     nascerDoSol: formatarHora(hojeSunrise),
     porDoSol: formatarHora(hojeSunset),
+    timezone: data.timezone,
+    timezoneAbbreviation: data.timezone_abbreviation,
+    utcOffsetSeconds: data.utc_offset_seconds,
   };
 
   const unidades: OpenMeteoCurrentWeatherUnits = {

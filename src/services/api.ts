@@ -420,31 +420,224 @@ export async function getResumoWikipedia(cidade: string): Promise<WikipediaResum
 }
 
 /**
- * 7. Últimas notícias do IBGE filtradas pelo Estado (UF).
- * Cache: 15 minutos por UF.
+ * 7. Notícias multicanais: IBGE Cidades, Agência Brasil (EBC), G1 Natureza e Notícias Regionais.
+ * Cache: 10 minutos por UF/Município.
  */
-export async function getNoticiasIBGE(uf: string): Promise<NoticiaIBGE[]> {
+export async function getNoticiasIBGE(uf?: string, municipioNome?: string): Promise<NoticiaIBGE[]> {
   try {
-    const cacheKey = `ibge_noticias_${(uf || "BR").toUpperCase()}`;
-    const emCache = getCached<NoticiaIBGE[]>(cacheKey, 900000);
+    const ufNorm = (uf || "BR").toUpperCase();
+    const cacheKey = `noticias_multicanal_v3_${ufNorm}`;
+    const emCache = getCached<NoticiaIBGE[]>(cacheKey, 600000);
     if (emCache) return emCache;
 
-    const response = await fetch(`${IBGE_NOTICIAS_BASE}/?qtd=3&tipo=noticia`);
-    if (!response.ok) return [];
+    const promessas: Promise<NoticiaIBGE[]>[] = [];
 
-    const data = await response.json();
-    if (!data.items || !Array.isArray(data.items)) return [];
+    // 1. IBGE Notícias Gerais & Cidades
+    promessas.push(
+      (async () => {
+        try {
+          const res = await fetch(`${IBGE_NOTICIAS_BASE}/?qtd=4&tipo=noticia`);
+          if (!res.ok) return [];
+          const data = await res.json();
+          if (!data.items || !Array.isArray(data.items)) return [];
+          return data.items.map((item: any) => {
+            let imgUrl: string | undefined;
+            try {
+              if (item.imagens) {
+                const imgParsed = typeof item.imagens === "string" ? JSON.parse(item.imagens) : item.imagens;
+                const path = imgParsed.image_intro || imgParsed.image_fulltext;
+                if (path) imgUrl = `https://agenciadenoticias.ibge.gov.br/${path.replace(/^\//, "")}`;
+              }
+            } catch {}
+            return {
+              id: `ibge-${item.id}`,
+              titulo: item.titulo,
+              introducao: item.introducao,
+              data_publicacao: item.data_publicacao,
+              link: item.link,
+              editorias: item.editorias || "Cidades",
+              fonte: "ibge" as const,
+              fonteNome: "IBGE Cidades",
+              categoria: "ibge" as const,
+              imagemUrl: imgUrl,
+            };
+          });
+        } catch {
+          return [];
+        }
+      })()
+    );
 
-    const resultado: NoticiaIBGE[] = data.items.map((item: any) => ({
-      id: item.id,
-      titulo: item.titulo,
-      introducao: item.introducao,
-      data_publicacao: item.data_publicacao,
-      link: item.link,
-      editorias: item.editorias,
-    }));
-    setCached(cacheKey, resultado);
-    return resultado;
+    // 2. Agência Brasil (EBC) - RSS Oficial de Notícias Públicas
+    promessas.push(
+      (async () => {
+        try {
+          const res = await fetch("https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml");
+          if (!res.ok) return [];
+          const xml = await res.text();
+          const items: NoticiaIBGE[] = [];
+          const regex = /<item>([\s\S]*?)<\/item>/g;
+          let m: RegExpExecArray | null;
+          let idx = 0;
+          while ((m = regex.exec(xml)) !== null && items.length < 4) {
+            const block = m[1];
+            const titleMatch = block.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
+            const linkMatch = block.match(/<link>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/link>/);
+            const descMatch = block.match(/<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/);
+            const dateMatch = block.match(/<pubDate>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/pubDate>/);
+            const imgMatch = block.match(/<imagem-destaque>([\s\S]*?)<\/imagem-destaque>/);
+
+            if (titleMatch && linkMatch) {
+              const rawDesc = descMatch ? descMatch[1] : "";
+              const cleanDesc = rawDesc
+                .replace(/&lt;.*?&gt;/g, "")
+                .replace(/<[^>]+>/g, "")
+                .replace(/&nbsp;/g, " ")
+                .replace(/&amp;/g, "&")
+                .trim();
+
+              let dataFormatada = "";
+              if (dateMatch) {
+                try {
+                  const d = new Date(dateMatch[1]);
+                  dataFormatada = d.toLocaleDateString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                } catch {
+                  dataFormatada = dateMatch[1];
+                }
+              }
+
+              items.push({
+                id: `ebc-${idx++}`,
+                titulo: titleMatch[1].trim(),
+                introducao: cleanDesc.slice(0, 220) + (cleanDesc.length > 220 ? "..." : ""),
+                data_publicacao: dataFormatada,
+                link: linkMatch[1].trim(),
+                fonte: "ebc" as const,
+                fonteNome: "Agência Brasil",
+                categoria: "ebc" as const,
+                imagemUrl: imgMatch ? imgMatch[1].trim() : undefined,
+              });
+            }
+          }
+          return items;
+        } catch {
+          return [];
+        }
+      })()
+    );
+
+    // 3. G1 Natureza & Clima (Via Route Handler /api/noticias-g1 com Fallback Oficial de Clima)
+    promessas.push(
+      (async () => {
+        try {
+          const res = await fetch("/api/noticias-g1");
+          if (res.ok) {
+            const data = await res.json();
+            if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+              return data.items;
+            }
+          }
+        } catch {
+          // Fallback abaixo
+        }
+
+        // Fallback: Notícias de Clima & Meio Ambiente do IBGE
+        try {
+          const res = await fetch(`${IBGE_NOTICIAS_BASE}/?qtd=3&busca=clima`);
+          if (!res.ok) return [];
+          const data = await res.json();
+          if (!data.items || !Array.isArray(data.items)) return [];
+          return data.items.map((item: any) => {
+            let imgUrl: string | undefined;
+            try {
+              if (item.imagens) {
+                const imgParsed = typeof item.imagens === "string" ? JSON.parse(item.imagens) : item.imagens;
+                const path = imgParsed.image_intro || imgParsed.image_fulltext;
+                if (path) imgUrl = `https://agenciadenoticias.ibge.gov.br/${path.replace(/^\//, "")}`;
+              }
+            } catch {}
+            return {
+              id: `clima-ibge-${item.id}`,
+              titulo: item.titulo,
+              introducao: item.introducao,
+              data_publicacao: item.data_publicacao,
+              link: item.link,
+              editorias: "Clima & Meio Ambiente",
+              fonte: "clima" as const,
+              fonteNome: "Clima & Meio Ambiente",
+              categoria: "clima" as const,
+              imagemUrl: imgUrl,
+            };
+          });
+        } catch {
+          return [];
+        }
+      })()
+    );
+
+    // 4. Notícias Regionais do Estado ({uf}) via IBGE Busca
+    if (uf && uf !== "BR") {
+      promessas.push(
+        (async () => {
+          try {
+            const res = await fetch(`${IBGE_NOTICIAS_BASE}/?qtd=3&busca=${encodeURIComponent(uf)}`);
+            if (!res.ok) return [];
+            const data = await res.json();
+            if (!data.items || !Array.isArray(data.items)) return [];
+            return data.items.map((item: any) => {
+              let imgUrl: string | undefined;
+              try {
+                if (item.imagens) {
+                  const imgParsed = typeof item.imagens === "string" ? JSON.parse(item.imagens) : item.imagens;
+                  const path = imgParsed.image_intro || imgParsed.image_fulltext;
+                  if (path) imgUrl = `https://agenciadenoticias.ibge.gov.br/${path.replace(/^\//, "")}`;
+                }
+              } catch {}
+              return {
+                id: `regional-${item.id}`,
+                titulo: item.titulo,
+                introducao: item.introducao,
+                data_publicacao: item.data_publicacao,
+                link: item.link,
+                editorias: item.editorias || uf,
+                fonte: "regional" as const,
+                fonteNome: `IBGE ${uf}`,
+                categoria: "regional" as const,
+                imagemUrl: imgUrl,
+              };
+            });
+          } catch {
+            return [];
+          }
+        })()
+      );
+    }
+
+    const respostas = await Promise.allSettled(promessas);
+    const todas: NoticiaIBGE[] = [];
+    for (const r of respostas) {
+      if (r.status === "fulfilled" && Array.isArray(r.value)) {
+        todas.push(...r.value);
+      }
+    }
+
+    // Desduplica por título
+    const vistos = new Set<string>();
+    const unicas = todas.filter((item) => {
+      const norm = item.titulo.toLowerCase().trim();
+      if (vistos.has(norm)) return false;
+      vistos.add(norm);
+      return true;
+    });
+
+    setCached(cacheKey, unicas);
+    return unicas;
   } catch {
     return [];
   }

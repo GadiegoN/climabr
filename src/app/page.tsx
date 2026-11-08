@@ -207,7 +207,7 @@ function WeatherAppContent() {
           getClimaCompleto(coordenadas.latitude, coordenadas.longitude),
           getQualidadeAr(coordenadas.latitude, coordenadas.longitude),
           getResumoWikipedia(municipioNome),
-          getNoticiasIBGE(uf),
+          getNoticiasIBGE(uf, municipioNome),
           getAlertasINMET(uf, municipioId),
           getAlertasCEMADEN(municipioId, uf, municipioNome),
           getDadosElNino(uf),

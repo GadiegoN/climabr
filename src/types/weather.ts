@@ -95,14 +95,20 @@ export interface WikipediaResumo {
   paginaUrl?: string;
 }
 
-// Tipagem para Notícias do IBGE
+// Tipagem para Notícias Integradas (IBGE, Agência Brasil / EBC, G1 Clima)
+export type CategoriaNoticia = "todas" | "ibge" | "ebc" | "clima" | "regional";
+
 export interface NoticiaIBGE {
-  id: number;
+  id: number | string;
   titulo: string;
   introducao: string;
   data_publicacao: string;
   link: string;
   editorias?: string;
+  fonte?: "ibge" | "ebc" | "clima" | "regional";
+  fonteNome?: string;
+  categoria?: CategoriaNoticia;
+  imagemUrl?: string;
 }
 
 // Tipagem para Alertas do INMET (com detalhes avançados de riscos e instruções)

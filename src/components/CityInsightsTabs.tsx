@@ -47,6 +47,7 @@ interface CityInsightsTabsProps {
 
 type TabTipo = "mapa" | "historia" | "noticias" | "anuncios" | "litoral";
 type FiltroAnuncio = "todos" | "nacional" | "estadual" | "local" | "frio" | "calor";
+type FiltroNoticia = "todas" | "ibge" | "ebc" | "clima" | "regional";
 
 export default function CityInsightsTabs({
   coordenadas,
@@ -62,6 +63,7 @@ export default function CityInsightsTabs({
 }: CityInsightsTabsProps) {
   const [tabAtiva, setTabAtiva] = useState<TabTipo>("mapa");
   const [filtroAnuncio, setFiltroAnuncio] = useState<FiltroAnuncio>("todos");
+  const [filtroNoticia, setFiltroNoticia] = useState<FiltroNoticia>("todas");
   const [mounted, setMounted] = useState(false);
   const [isModalAnunciarAberto, setIsModalAnunciarAberto] = useState(false);
   const [enviadoFeedback, setEnviadoFeedback] = useState(false);
@@ -244,46 +246,183 @@ export default function CityInsightsTabs({
           </div>
         )}
 
-        {/* ABA 3: NOTÍCIAS DO IBGE */}
-        {tabAtiva === "noticias" && (
-          <div className="space-y-3">
-            {noticiasIBGE.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {noticiasIBGE.map((item) => (
-                  <a
-                    key={item.id}
-                    href={item.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/[0.03] hover:bg-black/10 dark:hover:bg-white/[0.07] border border-[var(--card-border)] transition-all flex flex-col justify-between group"
-                  >
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)]">
-                        <Calendar className="w-3 h-3 text-sky-400" />
-                        <span>{formatarDataHoraBR(item.data_publicacao)}</span>
-                      </div>
-                      <h5 className="font-semibold text-xs text-[var(--text-main)] group-hover:text-sky-400 transition-colors line-clamp-2">
-                        {item.titulo}
-                      </h5>
-                      <p className="text-[11px] text-[var(--text-muted)] line-clamp-3 leading-relaxed">
-                        {item.introducao}
-                      </p>
-                    </div>
+        {/* ABA 3: NOTÍCIAS INTEGRADAS MULTICANAIS (IBGE, EBC, G1 CLIMA & REGIONAL) */}
+        {tabAtiva === "noticias" && (() => {
+          const totalIbge = noticiasIBGE.filter((n) => n.categoria === "ibge" || n.fonte === "ibge").length;
+          const totalEbc = noticiasIBGE.filter((n) => n.categoria === "ebc" || n.fonte === "ebc").length;
+          const totalClima = noticiasIBGE.filter((n) => n.categoria === "clima" || n.fonte === "clima").length;
+          const totalRegional = noticiasIBGE.filter((n) => n.categoria === "regional" || n.fonte === "regional").length;
 
-                    <div className="flex items-center gap-1 text-[11px] text-sky-400 font-medium mt-3 pt-2 border-t border-[var(--card-border)]">
-                      <span>Ver matéria oficial</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </div>
-                  </a>
-                ))}
+          const noticiasFiltradas = filtroNoticia === "todas"
+            ? noticiasIBGE
+            : noticiasIBGE.filter((n) => (n.categoria || n.fonte) === filtroNoticia);
+
+          const getBadgeFonte = (fonte?: string) => {
+            switch (fonte) {
+              case "ebc":
+                return { classe: "badge-emerald", label: "Agência Brasil" };
+              case "clima":
+                return { classe: "badge-teal", label: "G1 Natureza & Clima" };
+              case "regional":
+                return { classe: "badge-amber", label: `IBGE ${uf}` };
+              default:
+                return { classe: "badge-sky", label: "IBGE Cidades" };
+            }
+          };
+
+          return (
+            <div className="space-y-4">
+              {/* Header com Filtros Interativos em Pílulas */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-black/5 dark:bg-white/[0.03] border border-[var(--card-border)] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--card-border)] pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Newspaper className="w-4 h-4 text-sky-400 shrink-0" />
+                    <h4 className="text-xs sm:text-sm font-bold text-[var(--text-main)]">
+                      Central de Notícias Oficiais & Meteorológicas
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-[var(--text-muted)]">
+                    Filtrar por canal oficial:
+                  </span>
+                </div>
+
+                {/* Filtros em Pílulas */}
+                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 flex-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => setFiltroNoticia("todas")}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                      filtroNoticia === "todas"
+                        ? "bg-sky-500 text-white shadow-sm"
+                        : "bg-black/10 dark:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                    }`}
+                  >
+                    Todas ({noticiasIBGE.length})
+                  </button>
+
+                  {totalIbge > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFiltroNoticia("ibge")}
+                      className={`px-2.5 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                        filtroNoticia === "ibge"
+                          ? "bg-sky-500 text-white shadow-sm"
+                          : "bg-black/10 dark:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                      }`}
+                    >
+                      🏛️ IBGE Cidades ({totalIbge})
+                    </button>
+                  )}
+
+                  {totalEbc > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFiltroNoticia("ebc")}
+                      className={`px-2.5 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                        filtroNoticia === "ebc"
+                          ? "bg-emerald-500 text-white shadow-sm"
+                          : "bg-black/10 dark:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                      }`}
+                    >
+                      🇧🇷 Agência Brasil ({totalEbc})
+                    </button>
+                  )}
+
+                  {totalClima > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFiltroNoticia("clima")}
+                      className={`px-2.5 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                        filtroNoticia === "clima"
+                          ? "bg-teal-500 text-white shadow-sm"
+                          : "bg-black/10 dark:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                      }`}
+                    >
+                      🌿 Clima & Natureza ({totalClima})
+                    </button>
+                  )}
+
+                  {totalRegional > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setFiltroNoticia("regional")}
+                      className={`px-2.5 py-1 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer ${
+                        filtroNoticia === "regional"
+                          ? "bg-amber-500 text-white shadow-sm"
+                          : "bg-black/10 dark:bg-white/5 text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                      }`}
+                    >
+                      📍 Estado ({uf}) ({totalRegional})
+                    </button>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="py-8 text-center text-xs text-[var(--text-muted)]">
-                Nenhuma notícia recente cadastrada para este estado no IBGE Notícias.
-              </div>
-            )}
-          </div>
-        )}
+
+              {/* Grid das Notícias Filtradas */}
+              {noticiasFiltradas.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                  {noticiasFiltradas.map((item) => {
+                    const badge = getBadgeFonte(item.fonte);
+
+                    return (
+                      <a
+                        key={item.id}
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/[0.03] hover:bg-black/10 dark:hover:bg-white/[0.07] border border-[var(--card-border)] transition-all flex flex-col justify-between group shadow-sm hover:-translate-y-0.5"
+                      >
+                        <div className="space-y-2">
+                          {/* Imagem de Capa Opcional */}
+                          {item.imagemUrl && (
+                            <div className="w-full h-32 rounded-xl overflow-hidden bg-black/10 relative">
+                              <img
+                                src={item.imagemUrl}
+                                alt={item.titulo}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                loading="lazy"
+                              />
+                            </div>
+                          )}
+
+                          {/* Cabeçalho da Notícia: Badge da Fonte + Data */}
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className={`${badge.classe} px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider`}>
+                              {item.fonteNome || badge.label}
+                            </span>
+                            <div className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                              <Calendar className="w-3 h-3 text-sky-400 shrink-0" />
+                              <span>{formatarDataHoraBR(item.data_publicacao)}</span>
+                            </div>
+                          </div>
+
+                          {/* Título & Introdução */}
+                          <h5 className="font-bold text-xs sm:text-sm text-[var(--text-main)] group-hover:text-sky-400 transition-colors line-clamp-2 leading-snug">
+                            {item.titulo}
+                          </h5>
+
+                          <p className="text-[11px] text-[var(--text-muted)] line-clamp-3 leading-relaxed">
+                            {item.introducao}
+                          </p>
+                        </div>
+
+                        {/* Rodapé do Card */}
+                        <div className="flex items-center justify-between text-[11px] text-sky-400 font-medium mt-3 pt-2 border-t border-[var(--card-border)]">
+                          <span>Ler matéria na íntegra</span>
+                          <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-8 text-center text-xs text-[var(--text-muted)] p-6 rounded-2xl bg-black/5 dark:bg-white/[0.02] border border-[var(--card-border)]">
+                  Nenhuma notícia encontrada para o filtro selecionado.
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ABA: ANÚNCIOS & OPORTUNIDADES LOCAIS (MOCK MULTI-SEGMENTAÇÃO) */}
         {tabAtiva === "anuncios" && (() => {

@@ -22,6 +22,7 @@ import {
   calcularRiscoFogo,
   getDadosElNino,
   reverseGeocodeGPS,
+  getCondicoesMarinhas,
 } from "@/services/api";
 import { resolverTemaEfetivo } from "@/utils/theme";
 import { ThemeSelector } from "@/components/ThemeSelector";
@@ -201,7 +202,7 @@ function WeatherAppContent() {
         }
 
         // Passo 2: Buscar clima e dados complementares em paralelo com resiliência total
-        const [climaRes, qualidadeArRes, wikiRes, noticiasRes, alertasInmetRes, cemadenRes, elNinoRes] = await Promise.allSettled([
+        const [climaRes, qualidadeArRes, wikiRes, noticiasRes, alertasInmetRes, cemadenRes, elNinoRes, marinhaRes] = await Promise.allSettled([
           getClimaCompleto(coordenadas.latitude, coordenadas.longitude),
           getQualidadeAr(coordenadas.latitude, coordenadas.longitude),
           getResumoWikipedia(municipioNome),
@@ -209,14 +210,24 @@ function WeatherAppContent() {
           getAlertasINMET(uf, municipioId),
           getAlertasCEMADEN(municipioId, uf, municipioNome),
           getDadosElNino(uf),
+          getCondicoesMarinhas(coordenadas.latitude, coordenadas.longitude, uf),
         ]);
 
         if (climaRes.status !== "fulfilled") {
           throw new Error("Não foi possível obter os dados meteorológicos no momento.");
         }
 
-        const { clima, unidades, previsaoDiaria, previsaoHoraria } = climaRes.value;
+        const { clima, unidades, previsaoDiaria, previsaoHoraria, solar, agro } = climaRes.value;
         const riscoFogo = calcularRiscoFogo(clima.temperature, clima.relative_humidity, clima.windspeed);
+
+        const baseQualidadeAr = qualidadeArRes.status === "fulfilled" ? qualidadeArRes.value : null;
+        const qualidadeArComSolar = (baseQualidadeAr || solar)
+          ? {
+              ...(baseQualidadeAr ?? {}),
+              radiacaoSolarKwh: solar?.radiacaoSolarKwh,
+              potencialSolar: solar?.potencialSolar,
+            }
+          : undefined;
 
         setDadosClima({
           municipioId,
@@ -227,13 +238,15 @@ function WeatherAppContent() {
           unidades,
           previsaoDiaria,
           previsaoHoraria,
-          qualidadeAr: qualidadeArRes.status === "fulfilled" ? qualidadeArRes.value ?? undefined : undefined,
+          qualidadeAr: qualidadeArComSolar,
           wikipedia: wikiRes.status === "fulfilled" ? wikiRes.value ?? undefined : undefined,
           noticiasIBGE: noticiasRes.status === "fulfilled" ? noticiasRes.value : [],
           alertasINMET: alertasInmetRes.status === "fulfilled" ? alertasInmetRes.value : [],
           alertasCEMADEN: cemadenRes.status === "fulfilled" ? cemadenRes.value : [],
           riscoFogo,
           elNino: elNinoRes.status === "fulfilled" ? elNinoRes.value : undefined,
+          condicoesMarinhas: marinhaRes.status === "fulfilled" ? marinhaRes.value : null,
+          agro,
         });
 
         // Atualiza a URL do navegador suavemente apenas para permitir copiar o link
@@ -469,16 +482,16 @@ function WeatherAppContent() {
   };
 
   return (
-    <main className="relative min-h-screen flex flex-col justify-between p-4 sm:p-6 lg:p-10 transition-colors duration-500 overflow-x-hidden">
+    <main className="relative min-h-screen flex flex-col justify-between p-3 sm:p-6 lg:p-10 transition-colors duration-500 overflow-x-hidden">
       {/* 🌧️ Efeitos Climáticos Sutis de Fundo (Chuva, Estrelas, Sol) */}
       <WeatherEffects
         weatherCode={dadosClima?.clima?.weathercode}
         isDay={dadosClima?.clima?.is_day}
       />
 
-      <div className="relative z-10 max-w-4xl w-full mx-auto space-y-8">
+      <div className="relative z-10 max-w-4xl w-full mx-auto space-y-6 sm:space-y-8">
         {/* Barra Superior: Seletor de Temas */}
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end pt-1 sm:pt-2">
           <ThemeSelector
             temaSelecionado={tema}
             temaEfetivo={temaEfetivo}
@@ -487,29 +500,29 @@ function WeatherAppContent() {
         </div>
 
         {/* Cabeçalho da Aplicação */}
-        <header className="text-center space-y-4">
+        <header className="text-center space-y-3 sm:space-y-4">
           <div
             style={{
               backgroundColor: "rgba(16, 185, 129, 0.12)",
               borderColor: "rgba(16, 185, 129, 0.3)",
               color: "var(--accent-color)",
             }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold border"
+            className="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full text-[11px] sm:text-xs md:text-sm font-semibold border text-center"
           >
-            <Sparkles className="w-4 h-4" />
-            IBGE • Open-Meteo • Wikipedia • INMET
+            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate">IBGE • Open-Meteo • Wikipedia • INMET</span>
           </div>
 
-          <div className="flex items-center justify-center gap-3">
-            <CloudSunRain className="w-10 h-10 md:w-12 md:h-12 text-emerald-500" />
-            <h1 style={{ color: "var(--text-main)" }} className="text-3xl md:text-5xl font-black tracking-tight">
+          <div className="flex items-center justify-center gap-2.5 sm:gap-3">
+            <CloudSunRain className="w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 text-emerald-500 shrink-0" />
+            <h1 style={{ color: "var(--text-main)" }} className="text-2xl sm:text-3xl md:text-5xl font-black tracking-tight">
               Clima<span className="text-emerald-500">BR</span>
             </h1>
           </div>
 
           <p
             style={{ color: "var(--text-muted)" }}
-            className="text-sm sm:text-base max-w-xl mx-auto leading-relaxed"
+            className="text-xs sm:text-sm md:text-base max-w-xl mx-auto leading-relaxed px-1"
           >
             Consulte a previsão meteorológica em tempo real, hora a hora, qualidade do ar, radiação UV e dados oficiais de qualquer município do Brasil.
           </p>
@@ -620,7 +633,7 @@ function WeatherAppContent() {
           borderColor: "var(--card-border)",
           color: "var(--text-muted)",
         }}
-        className="text-center py-6 text-xs border-t mt-12 transition-colors"
+        className="text-center py-5 sm:py-6 text-[11px] sm:text-xs border-t mt-8 sm:mt-12 transition-colors px-2"
       >
         <p>
           Construído com Next.js 14+ (App Router), TypeScript e Tailwind CSS. Integração com IBGE, Open-Meteo, Wikipedia e INMET.

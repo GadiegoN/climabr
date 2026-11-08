@@ -76,12 +76,14 @@ export interface PrevisaoHorariaItem {
   probabilidadeChuva?: number;
 }
 
-// Tipagem para Qualidade do Ar & Índice UV
+// Tipagem para Qualidade do Ar, Índice UV & Potencial Solar
 export interface QualidadeArDados {
   aqi?: number;
   uvIndex?: number;
   pm25?: number;
   pm10?: number;
+  radiacaoSolarKwh?: number; // kWh/m² por dia
+  potencialSolar?: "Excelente" | "Bom" | "Moderado" | "Baixo";
 }
 
 // Tipagem para Wikipedia (Foto e Resumo da Cidade)
@@ -180,6 +182,38 @@ export interface CidadeHistorico {
 // Tipos para o Sistema de Temas Visuais
 export type TipoTema = "auto" | "claro" | "escuro" | "amanhecer" | "anoitecer";
 
+// Tipagem para Condições Marinhas e Oceânicas (Open-Meteo Marine)
+export interface CondicoesMarinhas {
+  alturaOnda: number; // metros
+  direcaoOnda: number; // graus
+  periodoOnda: number; // segundos
+  temperaturaAgua?: number; // °C
+  ondulacao?: number; // metros (swell)
+  maxOndaHoje?: number;
+  condicaoBanho: "Calmo" | "Moderado" | "Agitado" | "Ressaca";
+  descricaoBanho: string;
+  badgeCor: string;
+}
+
+// Tipagem para Painel Agroclimatológico & Solo (Open-Meteo Agro)
+export interface PrevisaoET0Item {
+  data: string;
+  et0: number; // mm
+}
+
+export interface DadosAgro {
+  umidadeSoloPct: number; // %
+  temperaturaSolo: number; // °C
+  et0Hoje: number; // mm
+  et0Semana: PrevisaoET0Item[];
+  statusIrrigacao: string;
+  badgeIrrigacao: string;
+  recomendacaoIrrigacao: string;
+  statusPulverizacao: string;
+  badgePulverizacao: string;
+  recomendacaoPulverizacao: string;
+}
+
 // Estrutura agregada completa para exibição no Dashboard
 export interface DadosClimaCidade {
   municipioId: string;
@@ -197,6 +231,8 @@ export interface DadosClimaCidade {
   alertasCEMADEN?: AlertaCEMADEN[];
   riscoFogo?: RiscoFogo;
   elNino?: DadosElNino;
+  condicoesMarinhas?: CondicoesMarinhas | null;
+  agro?: DadosAgro;
 }
 
 // Tipagem para descrição e estilo visual da condição climática

@@ -16,6 +16,8 @@ import {
   DadosElNino,
   PontoONI,
   ImpactoRegionalENSO,
+  CondicoesMarinhas,
+  DadosAgro,
 } from "@/types/weather";
 
 const IBGE_LOCALIDADES_BASE = "https://servicodados.ibge.gov.br/api/v1/localidades";
@@ -168,22 +170,31 @@ export async function getClimaCompleto(
   unidades: OpenMeteoCurrentWeatherUnits;
   previsaoDiaria: PrevisaoDiariaItem[];
   previsaoHoraria: PrevisaoHorariaItem[];
+  solar?: {
+    radiacaoSolarKwh?: number;
+    potencialSolar?: "Excelente" | "Bom" | "Moderado" | "Baixo";
+  };
+  agro?: DadosAgro;
 }> {
-  const cacheKey = `openmeteo_clima_${latitude.toFixed(3)}_${longitude.toFixed(3)}`;
+  const cacheKey = `openmeteo_clima_v2_${latitude.toFixed(3)}_${longitude.toFixed(3)}`;
   const emCache = getCached<{
     clima: OpenMeteoCurrentWeather;
     unidades: OpenMeteoCurrentWeatherUnits;
     previsaoDiaria: PrevisaoDiariaItem[];
     previsaoHoraria: PrevisaoHorariaItem[];
+    solar?: {
+      radiacaoSolarKwh?: number;
+      potencialSolar?: "Excelente" | "Bom" | "Moderado" | "Baixo";
+    };
+    agro?: DadosAgro;
   }>(cacheKey, 180000);
   if (emCache) return emCache;
 
   const params = new URLSearchParams({
     latitude: latitude.toFixed(6),
     longitude: longitude.toFixed(6),
-    current_weather: "true",
-    current: "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,is_day,weather_code,wind_speed_10m,wind_direction_10m",
-    daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset",
+    current: "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,is_day,weather_code,wind_speed_10m,wind_direction_10m,soil_temperature_0cm,soil_moisture_0_to_1cm",
+    daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,shortwave_radiation_sum,et0_fao_evapotranspiration",
     hourly: "temperature_2m,weather_code,precipitation_probability",
     forecast_hours: "24",
     timezone: "auto",
@@ -259,7 +270,85 @@ export async function getClimaCompleto(
     }
   }
 
-  const resultado = { clima, unidades, previsaoDiaria, previsaoHoraria };
+  // Potencial de Radiação Solar Diária (Open-Meteo Solar / Photovoltaic)
+  const radiacaoMj = data.daily?.shortwave_radiation_sum?.[0];
+  const radiacaoSolarKwh = radiacaoMj != null ? parseFloat((radiacaoMj / 3.6).toFixed(1)) : undefined;
+  let potencialSolar: "Excelente" | "Bom" | "Moderado" | "Baixo" = "Bom";
+  if (radiacaoSolarKwh !== undefined) {
+    if (radiacaoSolarKwh >= 5.5) potencialSolar = "Excelente";
+    else if (radiacaoSolarKwh >= 4.2) potencialSolar = "Bom";
+    else if (radiacaoSolarKwh >= 3.0) potencialSolar = "Moderado";
+    else potencialSolar = "Baixo";
+  }
+
+  // 🌾 Dados Agroclimatológicos & Manejo de Solo (Open-Meteo Agro)
+  let agro: DadosAgro | undefined;
+  if (current?.soil_moisture_0_to_1cm != null) {
+    const umidadeSoloPct = Math.round(Number(current.soil_moisture_0_to_1cm) * 100);
+    const temperaturaSolo = Math.round(Number(current.soil_temperature_0cm ?? clima.temperature) * 10) / 10;
+    const et0Hoje = data.daily?.et0_fao_evapotranspiration?.[0] != null ? Math.round(Number(data.daily.et0_fao_evapotranspiration[0]) * 10) / 10 : 3.0;
+
+    const et0Semana = Array.isArray(data.daily?.time)
+      ? data.daily.time.slice(0, 7).map((diaStr: string, idx: number) => ({
+          data: diaStr,
+          et0: data.daily.et0_fao_evapotranspiration?.[idx] != null ? Math.round(Number(data.daily.et0_fao_evapotranspiration[idx]) * 10) / 10 : 3.0,
+        }))
+      : [];
+
+    let statusIrrigacao = "Umidade Ideal";
+    let badgeIrrigacao = "badge-emerald";
+    let recomendacaoIrrigacao = "Teor de água no solo adequado para o desenvolvimento radicular. Mantenha os turnos normais de rega.";
+
+    if (umidadeSoloPct > 45) {
+      statusIrrigacao = "Solo Saturado / Úmido";
+      badgeIrrigacao = "badge-sky";
+      recomendacaoIrrigacao = "Solo com alta retenção de água. Recomenda-se suspender ou reduzir turnos de irrigação para evitar anoxia das raízes.";
+    } else if (umidadeSoloPct < 22) {
+      statusIrrigacao = "Déficit Hídrico";
+      badgeIrrigacao = "badge-amber";
+      recomendacaoIrrigacao = "Camada superficial com baixa umidade. Recomenda-se reforçar a irrigação, especialmente em fases de germinação ou florada.";
+    }
+
+    const ventoKmH = clima.windspeed;
+    let statusPulverizacao = "Ideal para Pulverização";
+    let badgePulverizacao = "badge-emerald";
+    let recomendacaoPulverizacao = `Ventos moderados (${Math.round(ventoKmH)} km/h) garantem boa deposição foliar de defensivos sem risco de deriva.`;
+
+    if (ventoKmH > 12) {
+      statusPulverizacao = "Alerta de Deriva";
+      badgePulverizacao = "badge-rose";
+      recomendacaoPulverizacao = `Vento forte (${Math.round(ventoKmH)} km/h). Risco crítico de arraste de defensivos para lavouras vizinhas. Evite pulverizar agora.`;
+    } else if (ventoKmH < 3) {
+      statusPulverizacao = "Risco de Inversão";
+      badgePulverizacao = "badge-amber";
+      recomendacaoPulverizacao = `Ar quase parado (${Math.round(ventoKmH)} km/h). Gotas finas podem ficar suspensas por inversão térmica em vez de atingir o alvo.`;
+    }
+
+    agro = {
+      umidadeSoloPct,
+      temperaturaSolo,
+      et0Hoje,
+      et0Semana,
+      statusIrrigacao,
+      badgeIrrigacao,
+      recomendacaoIrrigacao,
+      statusPulverizacao,
+      badgePulverizacao,
+      recomendacaoPulverizacao,
+    };
+  }
+
+  const resultado = {
+    clima,
+    unidades,
+    previsaoDiaria,
+    previsaoHoraria,
+    solar: {
+      radiacaoSolarKwh,
+      potencialSolar,
+    },
+    agro,
+  };
   setCached(cacheKey, resultado);
   return resultado;
 }
@@ -920,3 +1009,87 @@ export async function getDadosElNino(uf: string): Promise<DadosElNino> {
     };
   }
 }
+
+const UFS_LITORANEAS = new Set([
+  "AP", "PA", "MA", "PI", "CE", "RN", "PB", "PE", "AL", "SE", "BA", "ES", "RJ", "SP", "PR", "SC", "RS"
+]);
+
+/**
+ * 12. Consulta condições marinhas e oceânicas (ondas, temperatura da água do mar)
+ * via Open-Meteo Marine API. Retorna null se a cidade não for litorânea ou não houver dados.
+ * Cache: 30 minutos.
+ */
+export async function getCondicoesMarinhas(
+  latitude: number,
+  longitude: number,
+  uf: string
+): Promise<CondicoesMarinhas | null> {
+  if (!UFS_LITORANEAS.has(uf.toUpperCase())) {
+    return null;
+  }
+
+  try {
+    const cacheKey = `marine_${latitude.toFixed(3)}_${longitude.toFixed(3)}`;
+    const emCache = getCached<CondicoesMarinhas>(cacheKey, 1800000); // 30 min
+    if (emCache) return emCache;
+
+    const params = new URLSearchParams({
+      latitude: latitude.toFixed(4),
+      longitude: longitude.toFixed(4),
+      current: "wave_height,wave_direction,wave_period,sea_surface_temperature,swell_wave_height",
+      daily: "wave_height_max",
+      timezone: "America/Sao_Paulo",
+    });
+
+    const res = await fetch(`https://marine-api.open-meteo.com/v1/marine?${params.toString()}`);
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    if (!data.current || data.current.wave_height == null) {
+      return null;
+    }
+
+    const alturaOnda = Number(data.current.wave_height);
+    const direcaoOnda = Number(data.current.wave_direction ?? 0);
+    const periodoOnda = Number(data.current.wave_period ?? 0);
+    const temperaturaAgua = data.current.sea_surface_temperature != null ? Number(data.current.sea_surface_temperature) : undefined;
+    const ondulacao = data.current.swell_wave_height != null ? Number(data.current.swell_wave_height) : undefined;
+    const maxOndaHoje = data.daily?.wave_height_max?.[0] != null ? Number(data.daily.wave_height_max[0]) : undefined;
+
+    let condicaoBanho: CondicoesMarinhas["condicaoBanho"] = "Calmo";
+    let descricaoBanho = "Mar calmo com ondulações suaves. Excelente para banho de mar, natação e passeios náuticos.";
+    let badgeCor = "badge-emerald";
+
+    if (alturaOnda >= 2.8) {
+      condicaoBanho = "Ressaca";
+      descricaoBanho = "Condições severas de ressaca e arrebentação violenta. Banho de mar e navegação de pequeno porte não recomendados.";
+      badgeCor = "badge-rose";
+    } else if (alturaOnda >= 1.8) {
+      condicaoBanho = "Agitado";
+      descricaoBanho = "Ondas altas e fortes correntes de retorno (valas). Ideal para surfistas experientes; banhistas devem redobrar a atenção.";
+      badgeCor = "badge-amber";
+    } else if (alturaOnda >= 1.0) {
+      condicaoBanho = "Moderado";
+      descricaoBanho = "Ondulação moderada. Seguro para banhistas atentos aos postos de salva-vidas e bom para prática de esportes náuticos.";
+      badgeCor = "badge-sky";
+    }
+
+    const resultado: CondicoesMarinhas = {
+      alturaOnda,
+      direcaoOnda,
+      periodoOnda,
+      temperaturaAgua,
+      ondulacao,
+      maxOndaHoje,
+      condicaoBanho,
+      descricaoBanho,
+      badgeCor,
+    };
+
+    setCached(cacheKey, resultado);
+    return resultado;
+  } catch {
+    return null;
+  }
+}
+

@@ -6,8 +6,9 @@ import { WeatherChart } from "./WeatherChart";
 import EnvironmentalRadar from "./EnvironmentalRadar";
 import CityInsightsTabs from "./CityInsightsTabs";
 import { ShareModal } from "./ShareModal";
+import { AgroModal } from "./AgroModal";
 import { getFaseDaLua } from "@/utils/astronomy";
-import { gerarDicasPraticas } from "@/utils/dailyTips";
+import { gerarIndicesRotina, CategoriaRotina } from "@/utils/dailyTips";
 import {
   MapPin,
   Wind,
@@ -32,6 +33,7 @@ import {
   Sparkles,
   Moon,
   Camera,
+  Sprout,
 } from "lucide-react";
 
 interface WeatherCardProps {
@@ -54,22 +56,29 @@ export function WeatherCard({
   onAbrirCapsula,
 }: WeatherCardProps) {
   const [isShareModalAberto, setIsShareModalAberto] = useState(false);
+  const [isAgroModalAberto, setIsAgroModalAberto] = useState(false);
+  const [categoriaRotinaAtiva, setCategoriaRotinaAtiva] = useState<CategoriaRotina>("vestimenta");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const condicao = mapearCodigoClima(data.clima.weathercode, data.clima.is_day);
 
   // Dados astronômicos da Lua
   const faseLua = getFaseDaLua();
 
-  // Dicas práticas do dia e vestimenta inteligente
+  // Índices de Rotina Diária (O que Vestir, Varal, Esportes, Lavar Carro)
   const hojePrevisao = data.previsaoDiaria?.[0];
-  const dicasDoDia = gerarDicasPraticas({
+  const indicesRotina = gerarIndicesRotina({
     tempAtual: data.clima.temperature,
     tempMin: hojePrevisao ? hojePrevisao.tempMin : data.clima.temperature,
     tempMax: hojePrevisao ? hojePrevisao.tempMax : data.clima.temperature,
     probabilidadeChuva: hojePrevisao?.probabilidadeChuva,
     umidade: data.clima.relative_humidity,
     uv: data.qualidadeAr?.uvIndex,
+    velocidadeVento: data.clima.windspeed,
+    previsaoDiaria: data.previsaoDiaria,
+    previsaoHoraria: data.previsaoHoraria,
   });
+
+  const indiceAtivo = indicesRotina.find((i) => i.categoria === categoriaRotinaAtiva) || indicesRotina[0];
 
   // Formatar horário da medição
   const dataFormatada = new Date(data.clima.time).toLocaleString("pt-BR", {
@@ -122,7 +131,7 @@ export function WeatherCard({
 
       {/* 🌤️ Card Principal de Clima Atual */}
       <div
-        className={`w-full rounded-3xl p-6 md:p-8 text-white shadow-2xl transition-all duration-500 bg-gradient-to-br ${condicao.gradienteFundo} relative overflow-hidden border border-white/20`}
+        className={`w-full rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 text-white shadow-2xl transition-all duration-500 bg-gradient-to-br ${condicao.gradienteFundo} relative overflow-hidden border border-white/20`}
       >
         <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -130,9 +139,9 @@ export function WeatherCard({
         <div className="relative z-10 border-b border-white/20 pb-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-6 h-6 text-white drop-shadow-sm flex-shrink-0" />
-                <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight drop-shadow whitespace-nowrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white drop-shadow-sm flex-shrink-0" />
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight drop-shadow break-words min-w-0">
                   {data.municipio} - {data.uf}
                 </h2>
                 {onToggleFavorito && (
@@ -160,7 +169,7 @@ export function WeatherCard({
 
             {/* Badge da Condição Climática */}
             <span
-              className={`self-start sm:self-auto px-4 py-1.5 rounded-full text-xs md:text-sm font-semibold tracking-wide shadow-sm backdrop-blur-md whitespace-nowrap ${condicao.badgeCor}`}
+              className={`self-start sm:self-auto px-3.5 sm:px-4 py-1.5 rounded-full text-xs md:text-sm font-semibold tracking-wide shadow-sm backdrop-blur-md ${condicao.badgeCor}`}
             >
               {condicao.descricao}
             </span>
@@ -193,6 +202,17 @@ export function WeatherCard({
                 <span>Cápsula do Tempo</span>
               </button>
             )}
+
+            {/* Botão de Painel Agroclimatológico & Solo */}
+            <button
+              type="button"
+              onClick={() => setIsAgroModalAberto(true)}
+              title="Abrir painel agroclimatológico: umidade do solo, irrigação e pulverização"
+              className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-black/20 hover:bg-black/30 backdrop-blur-md border border-white/25 text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm whitespace-nowrap"
+            >
+              <Sprout className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Agro & Solo</span>
+            </button>
 
             {/* Botão de Compartilhar Link & Baixar PNG */}
             <button
@@ -310,35 +330,58 @@ export function WeatherCard({
           </div>
         </div>
 
-        {/* ✨ Dicas Práticas & O que Vestir Hoje */}
-        {dicasDoDia.length > 0 && (
-          <div className="relative z-10 pt-4 mt-4 border-t border-white/20 space-y-2.5">
-            <div className="flex items-center gap-2 text-xs font-bold text-white">
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Dicas de Conforto & O que Vestir Hoje:</span>
+        {/* ✨ Índices de Rotina Diária & Conforto (Zero Poluição - Abas Compactas) */}
+        {indicesRotina.length > 0 && (
+          <div className="relative z-10 pt-4 mt-4 border-t border-white/20 space-y-3">
+            {/* Header com Abas Compactas de Rotina */}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Rotina & Conforto:</span>
+              </div>
+
+              {/* Botões seletores tipo pílula com rolagem suave no mobile */}
+              <div className="flex items-center p-1 rounded-xl bg-black/30 backdrop-blur-md border border-white/10 gap-1 overflow-x-auto max-w-full custom-scrollbar flex-nowrap w-full sm:w-auto shrink-0">
+                {indicesRotina.map((item) => {
+                  const isAtiva = item.categoria === categoriaRotinaAtiva;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setCategoriaRotinaAtiva(item.categoria)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                        isAtiva
+                          ? "bg-white text-slate-900 shadow-md font-bold scale-[1.02]"
+                          : "text-white/70 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      <span className="text-xs">{item.emoji}</span>
+                      <span>{item.rotuloAba}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {dicasDoDia.map((dica) => (
-                <div
-                  key={dica.id}
-                  className="p-2.5 rounded-xl bg-black/20 backdrop-blur-md border border-white/15 text-white flex items-start gap-2.5"
-                >
-                  <span className="text-base select-none mt-0.5">
-                    {dica.icone === "shirt"
-                      ? "👕"
-                      : dica.icone === "umbrella"
-                      ? "☔"
-                      : dica.icone === "sun"
-                      ? "🧴"
-                      : "💧"}
-                  </span>
-                  <div className="space-y-0.5">
-                    <p className="font-bold text-white text-xs">{dica.titulo}</p>
-                    <p className="text-[11px] text-white/80 leading-relaxed">{dica.mensagem}</p>
-                  </div>
+
+            {/* Card Detalhado do Índice Selecionado */}
+            {indiceAtivo && (
+              <div className="p-3 rounded-2xl bg-black/25 backdrop-blur-md border border-white/15 text-white flex items-start gap-3 transition-all duration-200">
+                <div className="text-2xl select-none p-2 rounded-xl bg-white/10 shrink-0">
+                  {indiceAtivo.emoji}
                 </div>
-              ))}
-            </div>
+                <div className="space-y-1 flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-bold text-white text-xs sm:text-sm">{indiceAtivo.titulo}</h4>
+                    <span className={`${indiceAtivo.statusCor} text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full inline-block`}>
+                      {indiceAtivo.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/85 leading-relaxed">
+                    {indiceAtivo.mensagem}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -347,7 +390,7 @@ export function WeatherCard({
       {data.previsaoHoraria && data.previsaoHoraria.length > 0 && (
         <div
           style={cardStyle}
-          className="rounded-3xl p-5 md:p-6 border backdrop-blur-xl transition-all duration-300 space-y-4"
+          className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6 border backdrop-blur-xl transition-all duration-300 space-y-4"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -492,7 +535,7 @@ export function WeatherCard({
       {data.previsaoDiaria && data.previsaoDiaria.length > 0 && (
         <div
           style={cardStyle}
-          className="rounded-3xl p-5 md:p-6 border backdrop-blur-xl transition-all duration-300 space-y-4"
+          className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6 border backdrop-blur-xl transition-all duration-300 space-y-4"
         >
           <div className="flex items-center justify-between">
             <h3 style={{ color: "var(--text-main)" }} className="text-base font-bold flex items-center gap-2">
@@ -559,7 +602,7 @@ export function WeatherCard({
         </div>
       )}
 
-      {/* 🏛️ Sobre a Cidade (Abas Unificadas: Mapa Interativo, História Wikipedia e Notícias IBGE) */}
+      {/* 🏛️ Sobre a Cidade (Abas Unificadas: Mapa Interativo, História Wikipedia, Notícias IBGE e Litoral) */}
       <CityInsightsTabs
         coordenadas={data.coordenadas}
         municipio={data.municipio}
@@ -567,6 +610,7 @@ export function WeatherCard({
         wikipedia={data.wikipedia}
         noticiasIBGE={data.noticiasIBGE}
         favoritos={favoritos}
+        condicoesMarinhas={data.condicoesMarinhas}
         onSelecionarCidade={onSelecionarCidade}
       />
 
@@ -575,6 +619,13 @@ export function WeatherCard({
         cidade={data}
         isOpen={isShareModalAberto}
         onClose={() => setIsShareModalAberto(false)}
+      />
+
+      {/* 🌾 Modal Agroclimatológico & Solo */}
+      <AgroModal
+        cidade={data}
+        isOpen={isAgroModalAberto}
+        onClose={() => setIsAgroModalAberto(false)}
       />
     </div>
   );

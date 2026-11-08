@@ -2,7 +2,7 @@ import React from "react";
 
 export function WeatherSkeleton() {
   return (
-    <div className="w-full max-w-2xl mx-auto rounded-3xl p-6 md:p-8 bg-slate-900/60 backdrop-blur-md border border-slate-700/60 shadow-2xl animate-pulse space-y-6">
+    <div className="w-full max-w-2xl mx-auto rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 bg-slate-900/60 backdrop-blur-md border border-slate-700/60 shadow-2xl animate-pulse space-y-5 sm:space-y-6">
       {/* Cabeçalho do Card */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-5">
         <div className="space-y-2">

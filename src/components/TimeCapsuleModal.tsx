@@ -144,7 +144,7 @@ export function TimeCapsuleModal({
   const tempAtualHoje = cidade.clima.temperature;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
       <div
         style={{
           backgroundColor: "var(--card-bg)",
@@ -152,22 +152,22 @@ export function TimeCapsuleModal({
           boxShadow: "var(--card-shadow)",
           color: "var(--text-main)",
         }}
-        className="relative w-full max-w-2xl rounded-3xl border p-6 md:p-8 max-h-[90vh] overflow-y-auto custom-scrollbar space-y-6"
+        className="relative w-full max-w-2xl rounded-2xl sm:rounded-3xl border p-4 sm:p-6 md:p-8 max-h-[88vh] overflow-y-auto custom-scrollbar space-y-4 sm:space-y-6"
       >
         {/* Cabeçalho do Modal */}
         <div
-          className="flex items-center justify-between border-b pb-4"
+          className="flex items-center justify-between border-b pb-3 sm:pb-4"
           style={{ borderColor: "var(--card-border)" }}
         >
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0">
               <Hourglass className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg md:text-xl font-bold truncate">
                 Linha do Tempo do Clima
               </h2>
-              <p style={{ color: "var(--text-muted)" }} className="text-xs">
+              <p style={{ color: "var(--text-muted)" }} className="text-[11px] sm:text-xs truncate sm:whitespace-normal">
                 O clima deste mesmo dia ao longo da história em {cidade.municipio} ({cidade.uf})
               </p>
             </div>
@@ -176,7 +176,7 @@ export function TimeCapsuleModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -188,20 +188,20 @@ export function TimeCapsuleModal({
             backgroundColor: "rgba(16, 185, 129, 0.1)",
             borderColor: "rgba(16, 185, 129, 0.4)",
           }}
-          className="p-4 rounded-2xl border flex items-center justify-between"
+          className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border flex items-center justify-between gap-3"
         >
-          <div className="flex items-center gap-3">
-            <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping inline-block" />
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-500 block">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 animate-ping inline-block shrink-0" />
+            <div className="min-w-0">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-emerald-500 block">
                 Momento Atual (Referência)
               </span>
-              <span className="text-sm font-semibold">Hoje ({new Date().getFullYear()})</span>
+              <span className="text-xs sm:text-sm font-semibold truncate block">Hoje ({new Date().getFullYear()})</span>
             </div>
           </div>
-          <div className="text-right">
-            <span className="text-2xl font-black text-emerald-500">{Math.round(tempAtualHoje)}°C</span>
-            <span style={{ color: "var(--text-muted)" }} className="text-xs block">
+          <div className="text-right shrink-0">
+            <span className="text-xl sm:text-2xl font-black text-emerald-500">{Math.round(tempAtualHoje)}°C</span>
+            <span style={{ color: "var(--text-muted)" }} className="text-[10px] sm:text-xs block">
               Temp. Atual
             </span>
           </div>
@@ -209,9 +209,9 @@ export function TimeCapsuleModal({
 
         {/* Linha do Tempo (Timeline) */}
         {loading ? (
-          <div className="py-16 text-center space-y-3">
+          <div className="py-12 sm:py-16 text-center space-y-3">
             <Loader2 className="w-8 h-8 animate-spin text-purple-400 mx-auto" />
-            <p style={{ color: "var(--text-muted)" }} className="text-sm font-medium">
+            <p style={{ color: "var(--text-muted)" }} className="text-xs sm:text-sm font-medium">
               Viajando na história climática de {cidade.municipio}...
             </p>
           </div>
@@ -220,7 +220,7 @@ export function TimeCapsuleModal({
             {erro}
           </div>
         ) : (
-          <div className="relative pl-6 sm:pl-8 space-y-8 before:absolute before:left-2.5 sm:before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-gradient-to-b before:from-emerald-500 before:via-purple-500 before:to-indigo-500">
+          <div className="relative pl-5 sm:pl-8 space-y-6 sm:space-y-8 before:absolute before:left-2 sm:before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-gradient-to-b before:from-emerald-500 before:via-purple-500 before:to-indigo-500">
             {marcos.map((m) => {
               const cond = mapearCodigoClima(m.codigoClima, 1);
               const diff = (tempAtualHoje - m.max).toFixed(1);
@@ -230,8 +230,8 @@ export function TimeCapsuleModal({
               return (
                 <div key={m.ano} className="relative group">
                   {/* Nodo da Linha do Tempo */}
-                  <div className="absolute -left-6 sm:-left-8 top-1.5 w-5 h-5 rounded-full border-2 border-purple-400 bg-slate-950 flex items-center justify-center shadow-lg group-hover:scale-125 transition-transform">
-                    <span className="w-2 h-2 rounded-full bg-purple-400" />
+                  <div className="absolute -left-5 sm:-left-8 top-1.5 w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 border-purple-400 bg-slate-950 flex items-center justify-center shadow-lg group-hover:scale-125 transition-transform">
+                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-purple-400" />
                   </div>
 
                   {/* Conteúdo do Marco Histórico */}
@@ -240,56 +240,56 @@ export function TimeCapsuleModal({
                       backgroundColor: "var(--chip-bg)",
                       borderColor: "var(--chip-border)",
                     }}
-                    className="p-4 rounded-2xl border transition-all hover:-translate-y-0.5 shadow-sm space-y-2"
+                    className="p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all hover:-translate-y-0.5 shadow-sm space-y-2"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b pb-2" style={{ borderColor: "var(--card-border)" }}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-black text-purple-400">{m.ano}</span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b pb-2" style={{ borderColor: "var(--card-border)" }}>
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <span className="text-base sm:text-lg font-black text-purple-400">{m.ano}</span>
                         <span style={{ color: "var(--text-muted)" }} className="text-xs font-semibold">
                           ({m.label})
                         </span>
                       </div>
 
                       {/* Badge de Comparação Térmica com Hoje */}
-                      <div className="flex items-center gap-1 text-xs font-bold">
+                      <div className="flex items-center gap-1 text-[11px] sm:text-xs font-bold self-start sm:self-auto">
                         {isMaisQuenteHoje ? (
                           <span className="text-rose-400 flex items-center gap-0.5 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">
-                            <TrendingUp className="w-3 h-3" /> Hoje está +{diff}°C
+                            <TrendingUp className="w-3 h-3 shrink-0" /> Hoje está +{diff}°C
                           </span>
                         ) : isMaisFrioHoje ? (
                           <span className="text-sky-400 flex items-center gap-0.5 bg-sky-500/10 px-2 py-0.5 rounded-md border border-sky-500/20">
-                            <TrendingDown className="w-3 h-3" /> Hoje está {diff}°C
+                            <TrendingDown className="w-3 h-3 shrink-0" /> Hoje está {diff}°C
                           </span>
                         ) : (
                           <span className="text-emerald-400 flex items-center gap-0.5 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                            <Equal className="w-3 h-3" /> Quase igual a hoje
+                            <Equal className="w-3 h-3 shrink-0" /> Quase igual a hoje
                           </span>
                         )}
                       </div>
                     </div>
 
                     {/* Dados Climáticos daquele Ano */}
-                    <div className="flex items-center justify-between pt-1">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                          <WeatherIcon tipo={cond.icone} className="w-6 h-6 text-purple-300" />
+                    <div className="flex items-center justify-between pt-1 gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <div className="p-1.5 sm:p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 shrink-0">
+                          <WeatherIcon tipo={cond.icone} className="w-5 h-5 sm:w-6 sm:h-6 text-purple-300" />
                         </div>
-                        <div>
-                          <span className="text-xs font-semibold block">{cond.descricao}</span>
-                          <span style={{ color: "var(--text-muted)" }} className="text-[11px] flex items-center gap-1">
-                            <Calendar className="w-3 h-3" /> {new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} de {m.ano}
+                        <div className="min-w-0">
+                          <span className="text-xs font-semibold block truncate">{cond.descricao}</span>
+                          <span style={{ color: "var(--text-muted)" }} className="text-[10px] sm:text-[11px] flex items-center gap-1">
+                            <Calendar className="w-3 h-3 shrink-0" /> {new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} de {m.ano}
                           </span>
                         </div>
                       </div>
 
-                      <div className="text-right">
-                        <div className="text-base font-black">
+                      <div className="text-right shrink-0">
+                        <div className="text-sm sm:text-base font-black">
                           {Math.round(m.max)}°C{" "}
                           <span style={{ color: "var(--text-muted)" }} className="text-xs font-normal">
                             / {Math.round(m.min)}°C
                           </span>
                         </div>
-                        <div className="text-[11px] text-sky-400 flex items-center justify-end gap-1 font-medium">
+                        <div className="text-[10px] sm:text-[11px] text-sky-400 flex items-center justify-end gap-1 font-medium">
                           {m.chuva > 0 ? (
                             <>
                               <CloudRain className="w-3 h-3" />

@@ -249,17 +249,17 @@ html {
 }
 
 
-/* Animações Climáticas de Fundo */
+/* Animações Climáticas de Fundo (Totalmente balanceadas na tela inteira) */
 @keyframes rain-drop {
   0% {
     transform: translateY(0);
     opacity: 0;
   }
   15% {
-    opacity: 0.8;
+    opacity: 0.85;
   }
   90% {
-    opacity: 0.8;
+    opacity: 0.85;
   }
   100% {
     transform: translateY(105vh);
@@ -269,6 +269,30 @@ html {
 
 .animate-rain-drop {
   animation: rain-drop linear infinite;
+}
+
+@keyframes snow-fall {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(50vh) translateX(15px);
+  }
+  90% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(105vh) translateX(-15px);
+    opacity: 0;
+  }
+}
+
+.animate-snow-fall {
+  animation: snow-fall ease-in-out infinite;
 }
 
 @keyframes twinkle {
@@ -300,4 +324,34 @@ html {
 
 .animate-lightning {
   animation: lightning 8s ease-in-out infinite;
+}
+
+@keyframes sun-glow {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.06);
+  }
+}
+
+.animate-sun-glow {
+  animation: sun-glow 6s ease-in-out infinite;
+}
+
+@keyframes fog-drift {
+  0%, 100% {
+    transform: translateX(-3%);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateX(3%);
+    opacity: 0.5;
+  }
+}
+
+.animate-fog-drift {
+  animation: fog-drift 10s ease-in-out infinite;
 }

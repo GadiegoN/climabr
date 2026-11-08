@@ -100,7 +100,7 @@ export function CityComparisonModal({
   const c2 = dadosComparada;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-fade-in">
       <div
         style={{
           backgroundColor: "var(--card-bg)",
@@ -108,17 +108,17 @@ export function CityComparisonModal({
           boxShadow: "var(--card-shadow)",
           color: "var(--text-main)",
         }}
-        className="relative w-full max-w-3xl rounded-3xl border p-6 md:p-8 max-h-[90vh] overflow-y-auto custom-scrollbar space-y-6"
+        className="relative w-full max-w-3xl rounded-2xl sm:rounded-3xl border p-4 sm:p-6 md:p-8 max-h-[88vh] overflow-y-auto custom-scrollbar space-y-4 sm:space-y-6"
       >
         {/* Cabeçalho do Modal */}
-        <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: "var(--card-border)" }}>
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+        <div className="flex items-center justify-between border-b pb-3 sm:pb-4" style={{ borderColor: "var(--card-border)" }}>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 shrink-0">
               <Swords className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-lg md:text-xl font-bold">Batalha do Clima (Comparador)</h2>
-              <p style={{ color: "var(--text-muted)" }} className="text-xs">
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg md:text-xl font-bold truncate">Batalha do Clima (Comparador)</h2>
+              <p style={{ color: "var(--text-muted)" }} className="text-[11px] sm:text-xs truncate sm:whitespace-normal">
                 Compare as condições meteorológicas de duas cidades brasileiras lado a lado
               </p>
             </div>
@@ -127,7 +127,7 @@ export function CityComparisonModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -139,13 +139,13 @@ export function CityComparisonModal({
             backgroundColor: "var(--chip-bg)",
             borderColor: "var(--chip-border)",
           }}
-          className="p-4 rounded-2xl border space-y-3"
+          className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border space-y-3"
         >
-          <span className="text-xs font-semibold uppercase tracking-wider text-emerald-500 block">
+          <span className="text-xs font-semibold uppercase tracking-wider text-emerald-500 block leading-snug">
             Escolha a segunda cidade para comparar com {c1.municipio} ({c1.uf}):
           </span>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
             <select
               value={ufComp}
               onChange={(e) => handleUfChange(e.target.value)}
@@ -154,7 +154,7 @@ export function CityComparisonModal({
                 borderColor: "var(--input-border)",
                 color: "var(--input-text)",
               }}
-              className="w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2.5 rounded-xl border text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
               <option value="">Selecione o Estado</option>
               {estados.map((e) => (
@@ -173,7 +173,7 @@ export function CityComparisonModal({
                 borderColor: "var(--input-border)",
                 color: "var(--input-text)",
               }}
-              className="w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+              className="w-full px-3 py-2.5 rounded-xl border text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
             >
               <option value="">
                 {!ufComp ? "Escolha a UF primeiro" : loadingCidades ? "Carregando..." : "Selecione a Cidade"}
@@ -201,74 +201,74 @@ export function CityComparisonModal({
 
         {/* Tabela Comparativa Lado a Lado */}
         {c2 && (
-          <div className="space-y-4 animate-fade-in">
-            <div className="grid grid-cols-3 gap-2 text-center font-bold text-sm border-b pb-3" style={{ borderColor: "var(--card-border)" }}>
-              <div className="text-emerald-500 truncate">{c1.municipio} ({c1.uf})</div>
+          <div className="space-y-2.5 sm:space-y-3 animate-fade-in">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center font-bold text-xs sm:text-sm border-b pb-2.5 sm:pb-3" style={{ borderColor: "var(--card-border)" }}>
+              <div className="text-emerald-500 truncate px-1">{c1.municipio} ({c1.uf})</div>
               <div style={{ color: "var(--text-muted)" }}>Métrica</div>
-              <div className="text-sky-500 truncate">{c2.municipio} ({c2.uf})</div>
+              <div className="text-sky-500 truncate px-1">{c2.municipio} ({c2.uf})</div>
             </div>
 
             {/* Linha 1: Temperatura */}
-            <div className="grid grid-cols-3 gap-2 items-center text-center p-3 rounded-xl" style={{ backgroundColor: "var(--chip-bg)" }}>
-              <div className={`text-xl font-black ${c1.clima.temperature >= c2.clima.temperature ? "text-amber-400 font-extrabold" : ""}`}>
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 items-center text-center p-2.5 sm:p-3 rounded-xl" style={{ backgroundColor: "var(--chip-bg)" }}>
+              <div className={`text-base sm:text-xl font-black ${c1.clima.temperature >= c2.clima.temperature ? "text-amber-400 font-extrabold" : ""}`}>
                 {Math.round(c1.clima.temperature)}°C
               </div>
-              <div className="text-xs flex items-center justify-center gap-1 font-semibold" style={{ color: "var(--text-muted)" }}>
-                <Thermometer className="w-4 h-4 text-emerald-500" /> Temperatura
+              <div className="text-[11px] sm:text-xs flex items-center justify-center gap-1 font-semibold" style={{ color: "var(--text-muted)" }}>
+                <Thermometer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" /> <span className="truncate">Temperatura</span>
               </div>
-              <div className={`text-xl font-black ${c2.clima.temperature >= c1.clima.temperature ? "text-amber-400 font-extrabold" : ""}`}>
+              <div className={`text-base sm:text-xl font-black ${c2.clima.temperature >= c1.clima.temperature ? "text-amber-400 font-extrabold" : ""}`}>
                 {Math.round(c2.clima.temperature)}°C
               </div>
             </div>
 
             {/* Linha 2: Vento */}
-            <div className="grid grid-cols-3 gap-2 items-center text-center p-3 rounded-xl" style={{ backgroundColor: "var(--chip-bg)" }}>
-              <div className="text-sm font-bold">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 items-center text-center p-2.5 sm:p-3 rounded-xl" style={{ backgroundColor: "var(--chip-bg)" }}>
+              <div className="text-xs sm:text-sm font-bold truncate">
                 {c1.clima.windspeed} km/h
               </div>
-              <div className="text-xs flex items-center justify-center gap-1 font-semibold" style={{ color: "var(--text-muted)" }}>
-                <Wind className="w-4 h-4 text-teal-400" /> Vento
+              <div className="text-[11px] sm:text-xs flex items-center justify-center gap-1 font-semibold" style={{ color: "var(--text-muted)" }}>
+                <Wind className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-400 shrink-0" /> <span className="truncate">Vento</span>
               </div>
-              <div className="text-sm font-bold">
+              <div className="text-xs sm:text-sm font-bold truncate">
                 {c2.clima.windspeed} km/h
               </div>
             </div>
 
             {/* Linha 3: Umidade */}
-            <div className="grid grid-cols-3 gap-2 items-center text-center p-3 rounded-xl" style={{ backgroundColor: "var(--chip-bg)" }}>
-              <div className="text-sm font-bold">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 items-center text-center p-2.5 sm:p-3 rounded-xl" style={{ backgroundColor: "var(--chip-bg)" }}>
+              <div className="text-xs sm:text-sm font-bold truncate">
                 {c1.clima.relative_humidity !== undefined ? `${c1.clima.relative_humidity}%` : "N/D"}
               </div>
-              <div className="text-xs flex items-center justify-center gap-1 font-semibold" style={{ color: "var(--text-muted)" }}>
-                <Droplets className="w-4 h-4 text-sky-400" /> Umidade
+              <div className="text-[11px] sm:text-xs flex items-center justify-center gap-1 font-semibold" style={{ color: "var(--text-muted)" }}>
+                <Droplets className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400 shrink-0" /> <span className="truncate">Umidade</span>
               </div>
-              <div className="text-sm font-bold">
+              <div className="text-xs sm:text-sm font-bold truncate">
                 {c2.clima.relative_humidity !== undefined ? `${c2.clima.relative_humidity}%` : "N/D"}
               </div>
             </div>
 
             {/* Linha 4: Índice UV */}
-            <div className="grid grid-cols-3 gap-2 items-center text-center p-3 rounded-xl" style={{ backgroundColor: "var(--chip-bg)" }}>
-              <div className="text-sm font-bold">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 items-center text-center p-2.5 sm:p-3 rounded-xl" style={{ backgroundColor: "var(--chip-bg)" }}>
+              <div className="text-xs sm:text-sm font-bold truncate">
                 {c1.qualidadeAr?.uvIndex !== undefined ? c1.qualidadeAr.uvIndex.toFixed(1) : "--"}
               </div>
-              <div className="text-xs flex items-center justify-center gap-1 font-semibold" style={{ color: "var(--text-muted)" }}>
-                <Sun className="w-4 h-4 text-amber-400" /> Índice UV
+              <div className="text-[11px] sm:text-xs flex items-center justify-center gap-1 font-semibold" style={{ color: "var(--text-muted)" }}>
+                <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" /> <span className="truncate">Índice UV</span>
               </div>
-              <div className="text-sm font-bold">
+              <div className="text-xs sm:text-sm font-bold truncate">
                 {c2.qualidadeAr?.uvIndex !== undefined ? c2.qualidadeAr.uvIndex.toFixed(1) : "--"}
               </div>
             </div>
 
             {/* Linha 5: Chuva Atual */}
-            <div className="grid grid-cols-3 gap-2 items-center text-center p-3 rounded-xl" style={{ backgroundColor: "var(--chip-bg)" }}>
-              <div className="text-xs font-bold text-sky-400">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2 items-center text-center p-2.5 sm:p-3 rounded-xl" style={{ backgroundColor: "var(--chip-bg)" }}>
+              <div className="text-[11px] sm:text-xs font-bold text-sky-400 truncate">
                 {c1.clima.precipitation && c1.clima.precipitation > 0 ? `${c1.clima.precipitation} mm` : "Sem chuva"}
               </div>
-              <div className="text-xs flex items-center justify-center gap-1 font-semibold" style={{ color: "var(--text-muted)" }}>
-                <CloudRain className="w-4 h-4 text-blue-400" /> Chuva
+              <div className="text-[11px] sm:text-xs flex items-center justify-center gap-1 font-semibold" style={{ color: "var(--text-muted)" }}>
+                <CloudRain className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 shrink-0" /> <span className="truncate">Chuva</span>
               </div>
-              <div className="text-xs font-bold text-sky-400">
+              <div className="text-[11px] sm:text-xs font-bold text-sky-400 truncate">
                 {c2.clima.precipitation && c2.clima.precipitation > 0 ? `${c2.clima.precipitation} mm` : "Sem chuva"}
               </div>
             </div>

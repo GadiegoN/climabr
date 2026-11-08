@@ -51,12 +51,12 @@ export function LocationForm({
         borderColor: "var(--card-border)",
         boxShadow: "var(--card-shadow)",
       }}
-      className="w-full max-w-3xl mx-auto rounded-3xl p-6 sm:p-8 border backdrop-blur-xl transition-all duration-300 space-y-5"
+      className="w-full max-w-3xl mx-auto rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border backdrop-blur-xl transition-all duration-300 space-y-4 sm:space-y-5"
     >
-      {/* Botão de Localização Atual por GPS */}
+      {/* Botão de Localização Atual por GPS Responsivo */}
       <div
         style={{ borderColor: "var(--card-border)" }}
-        className="flex items-center justify-between border-b pb-4"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b pb-4"
       >
         <span style={{ color: "var(--text-muted)" }} className="text-xs font-semibold">
           Buscar por município ou:
@@ -65,7 +65,7 @@ export function LocationForm({
           type="button"
           onClick={onUsarGPS}
           disabled={loadingClima || loadingGPS}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+          className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm w-full sm:w-auto"
         >
           {loadingGPS ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -279,11 +279,11 @@ export function LocationForm({
         </div>
       )}
 
-      {/* Botão de Ação: Ver Clima */}
+      {/* Botão de Ação: Ver Clima Responsivo */}
       <button
         type="submit"
         disabled={!cidadeSelecionadaId || loadingClima || loadingMunicipios || loadingGPS}
-        className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-bold text-white text-base bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-[0.99] transition-all duration-200 shadow-lg shadow-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 cursor-pointer"
+        className="w-full inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-3.5 sm:py-4 rounded-2xl font-bold text-white text-sm sm:text-base bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-[0.99] transition-all duration-200 shadow-lg shadow-emerald-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 cursor-pointer"
       >
         {loadingClima ? (
           <>

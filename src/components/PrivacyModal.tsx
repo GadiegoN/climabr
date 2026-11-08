@@ -174,9 +174,14 @@ export function PrivacyModal({
                   <td className="p-2.5">Manter sua preferência visual na próxima visita</td>
                 </tr>
                 <tr>
-                  <td className="p-2.5 font-medium text-[var(--text-main)]">Alertas Diários (08h e 20h)</td>
+                  <td className="p-2.5 font-medium text-[var(--text-main)]">Alertas & Notificações Customizadas</td>
                   <td className="p-2.5"><code>localStorage</code></td>
-                  <td className="p-2.5">Horários e cidade para notificações meteorológicas (100% opt-in)</td>
+                  <td className="p-2.5">Horários escolhidos, tópicos e cidade monitorada (100% opt-in)</td>
+                </tr>
+                <tr>
+                  <td className="p-2.5 font-medium text-[var(--text-main)]">Configurações de Visualização</td>
+                  <td className="p-2.5"><code>localStorage</code></td>
+                  <td className="p-2.5">Preferências de exibição modular dos cards (radar, agro, dicas, curva 24h)</td>
                 </tr>
                 <tr>
                   <td className="p-2.5 font-medium text-[var(--text-main)]">Cache de Previsão</td>
@@ -233,10 +238,10 @@ export function PrivacyModal({
                 <strong>Zero Coleta de Dados Pessoais:</strong> Não solicitamos e não armazenamos seu e-mail, telefone, CPF ou cadastro. O envio é anônimo e gerido no seu próprio navegador.
               </li>
               <li>
-                <strong>Horários Previsíveis:</strong> Apenas os resumos meteorológicos solicitados (às 08:00 e/ou às 20:00). Nunca enviamos propagandas ou spam.
+                <strong>Controle Total de Horários e Assuntos:</strong> Você escolhe a hora exata e o assunto de cada notificação (previsão, o que vestir, alertas de defesa civil, etc.). Nunca enviamos nada fora do que você programou.
               </li>
               <li>
-                <strong>Revogação Imediata (Opt-out):</strong> Você pode desativar as notificações com um clique a qualquer momento no botão de alertas ou limpando seus dados locais.
+                <strong>Revogação Imediata (Opt-out):</strong> Você pode pausar, editar ou excluir qualquer alerta com um clique a qualquer momento na Central de Configurações ou limpando seus dados locais.
               </li>
             </ul>
           </div>

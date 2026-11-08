@@ -3,31 +3,31 @@
 import React, { useState, useEffect } from "react";
 import {
   X,
-  Bell,
   BellRing,
-  BellOff,
-  Sun,
-  Moon,
+  Clock,
+  Plus,
+  Trash2,
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
   Send,
   Loader2,
-  Clock,
   MapPin,
+  Sparkles,
 } from "lucide-react";
 import {
   NotificacoesConfig,
+  ItemAlertaNotificacao,
+  TopicoNotificacao,
+  TOPICOS_INFO,
   getNotificacoesConfig,
   salvarNotificacoesConfig,
   solicitarPermissao,
   getStatusPermissao,
-  dispararNotificacaoTeste,
+  dispararAlertaEspecifico,
   registrarServiceWorker,
 } from "@/utils/notifications";
 import { DadosClimaCidade } from "@/types/weather";
-import { getClimaCompleto } from "@/services/api";
-import { mapearCodigoClima } from "@/utils/weatherCodes";
 
 interface NotificationModalProps {
   cidade: DadosClimaCidade;
@@ -44,27 +44,19 @@ export function NotificationModal({
 }: NotificationModalProps) {
   const [config, setConfig] = useState<NotificacoesConfig>(getNotificacoesConfig());
   const [permissao, setPermissao] = useState<string>("default");
-  const [testando, setTestando] = useState(false);
-  const [testeSucesso, setTesteSucesso] = useState(false);
+  const [testandoId, setTestandoId] = useState<string | null>(null);
+  const [testeSucessoId, setTesteSucessoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      const cfg = getNotificacoesConfig();
-      // Se não tiver cidade configurada, usa a cidade atual
-      if (!cfg.cidadeId) {
-        cfg.cidadeId = cidade.municipioId;
-        cfg.cidadeNome = cidade.municipio;
-        cfg.uf = cidade.uf;
-        cfg.coordenadas = cidade.coordenadas;
-      }
-      setConfig(cfg);
+      setConfig(getNotificacoesConfig());
       setPermissao(getStatusPermissao());
       registrarServiceWorker();
     }
-  }, [isOpen, cidade]);
+  }, [isOpen]);
 
-  // Listener para tecla Escape
+  // Listener para Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -83,68 +75,123 @@ export function NotificationModal({
     color: "var(--text-main)",
   };
 
-  const handleToggleAtivacao = async () => {
+  // Ativar / Desativar global
+  const handleToggleGlobal = async () => {
     setErro(null);
 
-    // Se estiver desativando (Opt-out imediato)
     if (config.ativa) {
-      const novaConfig = { ...config, ativa: false };
-      setConfig(novaConfig);
-      salvarNotificacoesConfig(novaConfig);
+      const nova = { ...config, ativa: false };
+      setConfig(nova);
+      salvarNotificacoesConfig(nova);
       if (onConfigChange) onConfigChange(false);
       return;
     }
 
-    // Se estiver ativando, solicita permissão ao navegador
     const perm = await solicitarPermissao();
     setPermissao(perm);
 
     if (perm === "granted") {
-      const novaConfig = {
-        ...config,
-        ativa: true,
-        cidadeId: config.cidadeId || cidade.municipioId,
-        cidadeNome: config.cidadeNome || cidade.municipio,
-        uf: config.uf || cidade.uf,
-        coordenadas: config.coordenadas || cidade.coordenadas,
-      };
-      setConfig(novaConfig);
-      salvarNotificacoesConfig(novaConfig);
+      const nova = { ...config, ativa: true };
+      setConfig(nova);
+      salvarNotificacoesConfig(nova);
       if (onConfigChange) onConfigChange(true);
     } else if (perm === "denied") {
-      setErro("As notificações estão bloqueadas nas configurações do seu navegador. Por favor, desbloqueie para receber.");
+      setErro("As notificações estão bloqueadas nas configurações do seu navegador. Por favor, desbloqueie para receber alertas.");
     }
   };
 
-  const handleToggleHorarioManha = () => {
-    const nova = { ...config, horarioManha: !config.horarioManha };
+  // Alterar horário de um alerta
+  const handleHoraChange = (id: string, novaHora: string) => {
+    const novosAlertas = config.alertas.map((a) =>
+      a.id === id ? { ...a, hora: novaHora, ultimoDisparoData: undefined } : a
+    );
+    const nova = { ...config, alertas: novosAlertas };
     setConfig(nova);
     salvarNotificacoesConfig(nova);
   };
 
-  const handleToggleHorarioNoite = () => {
-    const nova = { ...config, horarioNoite: !config.horarioNoite };
+  // Alterar tópico de um alerta
+  const handleTopicoChange = (id: string, novoTopico: TopicoNotificacao) => {
+    const novosAlertas = config.alertas.map((a) =>
+      a.id === id ? { ...a, topico: novoTopico } : a
+    );
+    const nova = { ...config, alertas: novosAlertas };
     setConfig(nova);
     salvarNotificacoesConfig(nova);
   };
 
-  const handleVincularCidadeAtual = () => {
-    const nova = {
-      ...config,
-      cidadeId: cidade.municipioId,
+  // Alterar rótulo de um alerta
+  const handleRotuloChange = (id: string, novoRotulo: string) => {
+    const novosAlertas = config.alertas.map((a) =>
+      a.id === id ? { ...a, rotulo: novoRotulo } : a
+    );
+    const nova = { ...config, alertas: novosAlertas };
+    setConfig(nova);
+    salvarNotificacoesConfig(nova);
+  };
+
+  // Ativar/desativar alerta individual
+  const handleToggleAlerta = (id: string) => {
+    const novosAlertas = config.alertas.map((a) =>
+      a.id === id ? { ...a, ativo: !a.ativo } : a
+    );
+    const nova = { ...config, alertas: novosAlertas };
+    setConfig(nova);
+    salvarNotificacoesConfig(nova);
+  };
+
+  // Vincular alerta à cidade atual
+  const handleVincularCidadeAlerta = (id: string) => {
+    const novosAlertas = config.alertas.map((a) =>
+      a.id === id
+        ? {
+            ...a,
+            cidadeNome: cidade.municipio,
+            uf: cidade.uf,
+            cidadeId: cidade.municipioId,
+            coordenadas: cidade.coordenadas,
+          }
+        : a
+    );
+    const nova = { ...config, alertas: novosAlertas };
+    setConfig(nova);
+    salvarNotificacoesConfig(nova);
+  };
+
+  // Adicionar novo alerta customizado
+  const handleAdicionarAlerta = () => {
+    const agora = new Date();
+    const horaSugerida = `${String(agora.getHours()).padStart(2, "0")}:00`;
+    const novo: ItemAlertaNotificacao = {
+      id: `alerta_${Date.now()}`,
+      hora: horaSugerida,
+      topico: "rotina",
+      rotulo: "Novo Alerta",
+      ativo: true,
       cidadeNome: cidade.municipio,
       uf: cidade.uf,
+      cidadeId: cidade.municipioId,
       coordenadas: cidade.coordenadas,
     };
+    const nova = { ...config, ativa: true, alertas: [...config.alertas, novo] };
+    setConfig(nova);
+    salvarNotificacoesConfig(nova);
+    if (onConfigChange) onConfigChange(true);
+  };
+
+  // Remover alerta
+  const handleRemoverAlerta = (id: string) => {
+    const novosAlertas = config.alertas.filter((a) => a.id !== id);
+    const nova = { ...config, alertas: novosAlertas };
     setConfig(nova);
     salvarNotificacoesConfig(nova);
   };
 
-  const handleTestarNotificacao = async () => {
-    setTestando(true);
+  // Testar um alerta específico
+  const handleTestarAlerta = async (alerta: ItemAlertaNotificacao) => {
+    setTestandoId(alerta.id);
     setErro(null);
 
-    // Garante permissão
     let perm = getStatusPermissao();
     if (perm !== "granted") {
       perm = await solicitarPermissao();
@@ -152,55 +199,19 @@ export function NotificationModal({
     }
 
     if (perm !== "granted") {
-      setErro("Permissão de notificação necessária para realizar o teste.");
-      setTestando(false);
+      setErro("Permissão de notificação necessária para testar o alerta.");
+      setTestandoId(null);
       return;
     }
 
-    // Identifica qual é a cidade monitorada na configuração
-    const nomeAlvo = config.cidadeNome || cidade.municipio;
-    const ufAlvo = config.uf || cidade.uf;
+    const sucesso = await dispararAlertaEspecifico(alerta, true);
+    setTestandoId(null);
 
-    let tempAlvo = Math.round(cidade.clima.temperature);
-    let condicaoAlvo = "Tempo Atual";
-    let maxAlvo: number | undefined = cidade.previsaoDiaria?.[0]?.tempMax;
-    let minAlvo: number | undefined = cidade.previsaoDiaria?.[0]?.tempMin;
-    let chuvaAlvo: number | undefined = cidade.previsaoDiaria?.[0]?.probabilidadeChuva;
-
-    // Se a cidade monitorada for DIFERENTE da que está atualmente na tela (ex: Conquista vs Sacramento)
-    if (config.cidadeId && config.cidadeId !== cidade.municipioId && config.coordenadas) {
-      try {
-        const climaRemoto = await getClimaCompleto(
-          config.coordenadas.latitude,
-          config.coordenadas.longitude
-        );
-        tempAlvo = Math.round(climaRemoto.clima.temperature);
-        const condMap = mapearCodigoClima(climaRemoto.clima.weathercode, climaRemoto.clima.is_day);
-        condicaoAlvo = condMap.descricao;
-        maxAlvo = climaRemoto.previsaoDiaria?.[0]?.tempMax;
-        minAlvo = climaRemoto.previsaoDiaria?.[0]?.tempMin;
-        chuvaAlvo = climaRemoto.previsaoDiaria?.[0]?.probabilidadeChuva;
-      } catch {
-        // Fallback mantém valores padrão
-      }
-    }
-
-    const sucesso = await dispararNotificacaoTeste(
-      nomeAlvo,
-      ufAlvo,
-      tempAlvo,
-      condicaoAlvo,
-      maxAlvo !== undefined ? Math.round(maxAlvo) : undefined,
-      minAlvo !== undefined ? Math.round(minAlvo) : undefined,
-      chuvaAlvo
-    );
-
-    setTestando(false);
     if (sucesso) {
-      setTesteSucesso(true);
-      setTimeout(() => setTesteSucesso(false), 3500);
+      setTesteSucessoId(alerta.id);
+      setTimeout(() => setTesteSucessoId(null), 3500);
     } else {
-      setErro("Não foi possível emitir a notificação. Verifique se o navegador suporta notificações em segundo plano.");
+      setErro("Não foi possível emitir a notificação. Verifique se o navegador está autorizado a emitir notificações.");
     }
   };
 
@@ -208,7 +219,7 @@ export function NotificationModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fade-in">
       <div
         style={cardStyle}
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl border shadow-2xl p-5 sm:p-7 space-y-5"
+        className="w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-3xl border shadow-2xl p-5 sm:p-7 space-y-5"
       >
         {/* Topo do Modal */}
         <div className="flex items-start justify-between gap-4 border-b pb-4" style={{ borderColor: "var(--card-border)" }}>
@@ -218,10 +229,10 @@ export function NotificationModal({
             </div>
             <div>
               <h3 className="text-lg sm:text-xl font-black tracking-tight">
-                Notificações Diárias do Clima
+                Seus Alertas & Notificações
               </h3>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Previsão pré-configurada às 08h e 20h no seu dispositivo
+                Você escolhe o horário exato e o que notificar em cada horário
               </p>
             </div>
           </div>
@@ -230,13 +241,13 @@ export function NotificationModal({
             type="button"
             onClick={onClose}
             className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer shrink-0"
-            aria-label="Fechar modal de notificações"
+            aria-label="Fechar modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Mensagem de Erro / Bloqueio */}
+        {/* Mensagem de Erro */}
         {erro && (
           <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-500 text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -244,163 +255,204 @@ export function NotificationModal({
           </div>
         )}
 
-        {/* Interruptor Principal: Ativar / Desativar (LGPD Opt-in / Opt-out) */}
+        {/* Interruptor Principal */}
         <div className="p-4 rounded-2xl bg-black/5 dark:bg-white/[0.03] border border-[var(--card-border)] flex items-center justify-between gap-3">
           <div className="space-y-0.5">
             <div className="text-xs sm:text-sm font-bold text-[var(--text-main)] flex items-center gap-2">
-              <span>Alertas Meteorológicos</span>
+              <span>Sistema de Notificações</span>
               {config.ativa && permissao === "granted" ? (
                 <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30">
-                  Ativado
+                  Ativo ({config.alertas.filter((a) => a.ativo).length} programados)
                 </span>
               ) : (
                 <span className="px-2 py-0.5 rounded-full text-[10px] bg-black/10 dark:bg-white/10 text-[var(--text-muted)] font-medium">
-                  Desativado
+                  Pausado
                 </span>
               )}
             </div>
             <p className="text-[11px] text-[var(--text-muted)]">
-              Receba resumos automáticos sem precisar abrir o navegador
+              Alertas disparam no minuto exato configurado enquanto a página/PWA estiver aberta ou minimizada.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={handleToggleAtivacao}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
+            onClick={handleToggleGlobal}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm shrink-0 ${
               config.ativa && permissao === "granted"
                 ? "bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30"
-                : "bg-emerald-500 hover:bg-emerald-400 text-slate-950"
+                : "bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold"
             }`}
           >
-            {config.ativa && permissao === "granted" ? "Desativar" : "Ativar Notificações"}
+            {config.ativa && permissao === "granted" ? "Pausar Todos" : "Ativar Alertas"}
           </button>
         </div>
 
-        {/* Horários Pré-Configurados (08:00 e 20:00) */}
-        <div className="space-y-2.5">
-          <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider block">
-            Horários Agendados
-          </label>
+        {/* Lista de Alertas Customizados */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Alarmes & Tópicos Programados</span>
+            </label>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Bloco 08:00 Manhã */}
-            <div
-              onClick={handleToggleHorarioManha}
-              className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none space-y-2 ${
-                config.horarioManha
-                  ? "bg-amber-500/10 border-amber-500/30"
-                  : "bg-black/5 dark:bg-white/[0.02] border-[var(--card-border)] opacity-60"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400">
-                    <Sun className="w-4 h-4" />
-                  </div>
-                  <span className="font-mono font-black text-sm text-[var(--text-main)]">08:00</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={config.horarioManha}
-                  onChange={handleToggleHorarioManha}
-                  className="w-4 h-4 accent-amber-500 cursor-pointer"
-                />
-              </div>
-              <div>
-                <span className="text-xs font-bold block text-[var(--text-main)]">Previsão da Manhã</span>
-                <span className="text-[10px] text-[var(--text-muted)] leading-tight block mt-0.5">
-                  Máxima, mínima, chance de chuva e alertas para seu dia.
-                </span>
-              </div>
-            </div>
-
-            {/* Bloco 20:00 Noite */}
-            <div
-              onClick={handleToggleHorarioNoite}
-              className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none space-y-2 ${
-                config.horarioNoite
-                  ? "bg-indigo-500/10 border-indigo-500/30"
-                  : "bg-black/5 dark:bg-white/[0.02] border-[var(--card-border)] opacity-60"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400">
-                    <Moon className="w-4 h-4" />
-                  </div>
-                  <span className="font-mono font-black text-sm text-[var(--text-main)]">20:00</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={config.horarioNoite}
-                  onChange={handleToggleHorarioNoite}
-                  className="w-4 h-4 accent-indigo-500 cursor-pointer"
-                />
-              </div>
-              <div>
-                <span className="text-xs font-bold block text-[var(--text-main)]">Resumo da Noite</span>
-                <span className="text-[10px] text-[var(--text-muted)] leading-tight block mt-0.5">
-                  Previsão para a madrugada e como amanhecerá o dia seguinte.
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Cidade Vinculada */}
-        <div className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/[0.02] border border-[var(--card-border)] flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 min-w-0">
-            <MapPin className="w-4 h-4 text-emerald-500 shrink-0" />
-            <div className="min-w-0">
-              <span className="text-[var(--text-muted)] block text-[10px]">Município monitorado:</span>
-              <span className="font-bold text-[var(--text-main)] truncate block">
-                {config.cidadeNome ? `${config.cidadeNome} - ${config.uf}` : `${cidade.municipio} - ${cidade.uf}`}
-              </span>
-            </div>
-          </div>
-
-          {config.cidadeId !== cidade.municipioId && (
             <button
               type="button"
-              onClick={handleVincularCidadeAtual}
-              className="text-[11px] text-sky-400 hover:text-sky-300 font-semibold underline underline-offset-2 shrink-0 cursor-pointer"
+              onClick={handleAdicionarAlerta}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-95"
             >
-              Mudar para {cidade.municipio}
+              <Plus className="w-3.5 h-3.5 stroke-[3]" />
+              <span>Novo Alerta</span>
             </button>
-          )}
-        </div>
+          </div>
 
-        {/* Botão de Enviar Notificação de Teste Imediata */}
-        <div className="pt-1 space-y-2">
-          <button
-            type="button"
-            onClick={handleTestarNotificacao}
-            disabled={testando}
-            className="w-full py-2.5 px-4 rounded-xl border border-[var(--card-border)] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold text-[var(--text-main)] flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
-          >
-            {testando ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
-                <span>Enviando notificação de teste...</span>
-              </>
-            ) : testeSucesso ? (
-              <>
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400 font-bold">Notificação disparada com sucesso!</span>
-              </>
-            ) : (
-              <>
-                <Send className="w-3.5 h-3.5 text-sky-400" />
-                <span>Testar Notificação Agora</span>
-              </>
-            )}
-          </button>
+          {config.alertas.length === 0 ? (
+            <div className="p-6 rounded-2xl border border-dashed border-[var(--card-border)] text-center space-y-2">
+              <Sparkles className="w-8 h-8 text-amber-400 mx-auto opacity-80" />
+              <p className="text-sm font-bold text-[var(--text-main)]">Nenhum alerta criado ainda</p>
+              <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
+                Clique no botão &ldquo;Novo Alerta&rdquo; acima para definir o horário e o que deseja que o ClimaBR notifique.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {config.alertas.map((alerta, index) => {
+                const infoTopico = TOPICOS_INFO[alerta.topico] || TOPICOS_INFO.previsao;
+                const estaTestando = testandoId === alerta.id;
+                const testouComSucesso = testeSucessoId === alerta.id;
 
-          {/* Dica de Sistema Operacional (Windows / Mac / Android) */}
-          {testeSucesso && (
-            <div className="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-[11px] text-sky-300 leading-snug animate-fade-in">
-              <span>💡 <strong>Dica:</strong> Se o banner não saltar no meio da tela, abra a <strong>Central de Notificações do Windows</strong> (ícone de balãozinho/sino ao lado do relógio no canto inferior direito) ou certifique-se de que o modo <em>"Não Perturbe / Assistente de Foco"</em> está desligado no Windows.</span>
+                return (
+                  <div
+                    key={alerta.id}
+                    className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                      alerta.ativo
+                        ? "bg-black/5 dark:bg-white/[0.03] border-emerald-500/30 shadow-sm"
+                        : "bg-black/5 dark:bg-white/[0.01] border-[var(--card-border)] opacity-60"
+                    }`}
+                  >
+                    {/* Linha Superior: Horário, Rótulo, Switch e Botão Testar / Lixeira */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        {/* Seletor de Hora */}
+                        <div className="relative">
+                          <input
+                            type="time"
+                            value={alerta.hora}
+                            onChange={(e) => handleHoraChange(alerta.id, e.target.value)}
+                            className="bg-black/10 dark:bg-white/10 text-[var(--text-main)] font-mono font-black text-base px-3 py-1.5 rounded-xl border border-[var(--card-border)] focus:outline-none focus:border-emerald-500 cursor-pointer shadow-inner"
+                          />
+                        </div>
+
+                        {/* Nome / Rótulo do Alerta */}
+                        <input
+                          type="text"
+                          value={alerta.rotulo || ""}
+                          placeholder={`Alerta #${index + 1}`}
+                          onChange={(e) => handleRotuloChange(alerta.id, e.target.value)}
+                          className="text-xs font-semibold bg-transparent text-[var(--text-main)] placeholder:text-[var(--text-muted)] border-b border-transparent focus:border-[var(--card-border)] w-28 sm:w-36 outline-none truncate"
+                        />
+                      </div>
+
+                      {/* Ações: Ligar/Desligar, Testar e Excluir */}
+                      <div className="flex items-center gap-2">
+                        {/* Botão de Testar este alarme específico */}
+                        <button
+                          type="button"
+                          onClick={() => handleTestarAlerta(alerta)}
+                          disabled={estaTestando}
+                          title="Testar este alarme agora"
+                          className="px-2.5 py-1.5 rounded-xl border border-[var(--card-border)] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[11px] font-bold text-[var(--text-main)] flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          {estaTestando ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
+                          ) : testouComSucesso ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : (
+                            <Send className="w-3.5 h-3.5 text-sky-400" />
+                          )}
+                          <span className="hidden sm:inline">
+                            {testouComSucesso ? "Enviado!" : "Testar"}
+                          </span>
+                        </button>
+
+                        {/* Switch de Ativação do Alarme */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAlerta(alerta.id)}
+                          title={alerta.ativo ? "Desativar este alarme" : "Ativar este alarme"}
+                          className={`w-10 h-5.5 rounded-full transition-colors relative shrink-0 p-0.5 ${
+                            alerta.ativo ? "bg-emerald-500" : "bg-black/20 dark:bg-white/20"
+                          }`}
+                        >
+                          <div
+                            className={`w-4.5 h-4.5 rounded-full bg-white shadow-md transition-transform ${
+                              alerta.ativo ? "translate-x-4.5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+
+                        {/* Botão Excluir */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoverAlerta(alerta.id)}
+                          title="Excluir este alarme"
+                          className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Linha Central: O que notificar neste horário (Seletor de Tópico) */}
+                    <div className="space-y-1.5 pt-1 border-t border-[var(--card-border)]">
+                      <span className="text-[10px] uppercase font-bold text-[var(--text-muted)] block">
+                        O que notificar às {alerta.hora}:
+                      </span>
+
+                      <div className="relative">
+                        <select
+                          value={alerta.topico}
+                          onChange={(e) =>
+                            handleTopicoChange(alerta.id, e.target.value as TopicoNotificacao)
+                          }
+                          className="w-full text-xs font-bold p-2.5 rounded-xl border border-[var(--card-border)] bg-black/5 dark:bg-white/[0.05] text-[var(--text-main)] focus:outline-none focus:border-emerald-500 cursor-pointer"
+                        >
+                          {Object.entries(TOPICOS_INFO).map(([chave, info]) => (
+                            <option key={chave} value={chave} className="bg-slate-900 text-white">
+                              {info.iconeEmoji} {info.titulo}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <p className="text-[11px] text-[var(--text-muted)] leading-relaxed italic">
+                        {infoTopico.iconeEmoji} {infoTopico.descricao}
+                      </p>
+                    </div>
+
+                    {/* Linha Inferior: Cidade deste Alarme */}
+                    <div className="flex items-center justify-between gap-2 pt-1 text-[11px] text-[var(--text-muted)]">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>Cidade monitorada: </span>
+                        <strong className="text-[var(--text-main)] truncate">
+                          {alerta.cidadeNome} - {alerta.uf}
+                        </strong>
+                      </div>
+
+                      {alerta.cidadeNome !== cidade.municipio && (
+                        <button
+                          type="button"
+                          onClick={() => handleVincularCidadeAlerta(alerta.id)}
+                          className="text-sky-400 hover:text-sky-300 font-semibold underline underline-offset-2 shrink-0 cursor-pointer"
+                        >
+                          Mudar para {cidade.municipio}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -412,11 +464,10 @@ export function NotificationModal({
         >
           <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
           <p>
-            <strong>Privacidade & LGPD:</strong> Não pedimos seu e-mail, telefone ou cadastro. As notificações funcionam de forma anônima e suas configurações de horário ficam salvas apenas no seu aparelho. Você pode desativar a qualquer momento com 1 clique.
+            <strong>Privacidade & LGPD:</strong> Você tem controle total. Cada alerta roda com os dados locais salvos no seu aparelho. Sem cadastros, sem e-mails e sem rastreadores.
           </p>
         </div>
       </div>
     </div>
   );
 }
-

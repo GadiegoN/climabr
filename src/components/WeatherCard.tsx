@@ -7,10 +7,9 @@ import EnvironmentalRadar from "./EnvironmentalRadar";
 import CityInsightsTabs from "./CityInsightsTabs";
 import { ShareModal } from "./ShareModal";
 import { AgroModal } from "./AgroModal";
-import { NotificationModal } from "./NotificationModal";
 import { getFaseDaLua } from "@/utils/astronomy";
 import { gerarIndicesRotina, CategoriaRotina } from "@/utils/dailyTips";
-import { checarEAgendarNotificacaoAutomatica, getNotificacoesConfig } from "@/utils/notifications";
+import { ConfiguracoesVisualizacao } from "@/types/settings";
 import {
   MapPin,
   Wind,
@@ -36,7 +35,6 @@ import {
   Moon,
   Camera,
   Sprout,
-  Bell,
 } from "lucide-react";
 
 /**
@@ -150,6 +148,7 @@ interface WeatherCardProps {
   onSelecionarCidade?: (id: string, nome: string, uf: string, coordenadas?: Coordenadas) => void;
   onAbrirComparador?: () => void;
   onAbrirCapsula?: () => void;
+  configVisualizacao?: ConfiguracoesVisualizacao;
 }
 
 export function WeatherCard({
@@ -160,20 +159,13 @@ export function WeatherCard({
   onSelecionarCidade,
   onAbrirComparador,
   onAbrirCapsula,
+  configVisualizacao,
 }: WeatherCardProps) {
   const [isShareModalAberto, setIsShareModalAberto] = useState(false);
   const [isAgroModalAberto, setIsAgroModalAberto] = useState(false);
-  const [isNotificationModalAberto, setIsNotificationModalAberto] = useState(false);
-  const [isNotificacaoAtiva, setIsNotificacaoAtiva] = useState(false);
   const [categoriaRotinaAtiva, setCategoriaRotinaAtiva] = useState<CategoriaRotina>("vestimenta");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const condicao = mapearCodigoClima(data.clima.weathercode, data.clima.is_day);
-
-  // Inicializa status de notificação e checa agendamento automático
-  useEffect(() => {
-    const cfg = getNotificacoesConfig();
-    setIsNotificacaoAtiva(cfg.ativa);
-  }, []);
 
   // Relógio ao vivo no fuso horário local do município
   const [agora, setAgora] = useState<Date>(() => new Date());
@@ -195,21 +187,6 @@ export function WeatherCard({
   // Índices de Rotina Diária (O que Vestir, Varal, Esportes, Lavar Carro)
   const hojePrevisao = data.previsaoDiaria?.[0];
 
-  // Verifica se é janela de 08h ou 20h para disparo automático
-  useEffect(() => {
-    if (data) {
-      checarEAgendarNotificacaoAutomatica(
-        data.municipio,
-        data.uf,
-        Math.round(data.clima.temperature),
-        condicao.descricao,
-        hojePrevisao ? Math.round(hojePrevisao.tempMax) : undefined,
-        hojePrevisao ? Math.round(hojePrevisao.tempMin) : undefined,
-        hojePrevisao?.probabilidadeChuva,
-        data.municipioId
-      );
-    }
-  }, [data, condicao.descricao, hojePrevisao]);
   const indicesRotina = gerarIndicesRotina({
     tempAtual: data.clima.temperature,
     tempMin: hojePrevisao ? hojePrevisao.tempMin : data.clima.temperature,
@@ -223,6 +200,8 @@ export function WeatherCard({
   });
 
   const indiceAtivo = indicesRotina.find((i) => i.categoria === categoriaRotinaAtiva) || indicesRotina[0];
+
+
 
   // Formatar horário da medição
   const dataFormatada = new Date(data.clima.time).toLocaleString("pt-BR", {
@@ -249,7 +228,9 @@ export function WeatherCard({
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
       {/* ⚠️ Banner de Alerta Crítico (se houver aviso severo ativo na região) */}
-      {data.alertasINMET && data.alertasINMET.some((a) => a.severidade?.toLowerCase().includes("perigo") || a.nivel >= 2) && (
+      {(configVisualizacao?.mostrarAlertasDefesaCivil ?? true) &&
+        data.alertasINMET &&
+        data.alertasINMET.some((a) => a.severidade?.toLowerCase().includes("perigo") || a.nivel >= 2) && (
         <div className="space-y-2 w-full">
           {data.alertasINMET
             .filter((a) => a.severidade?.toLowerCase().includes("perigo") || a.nivel >= 2)
@@ -366,15 +347,17 @@ export function WeatherCard({
             )}
 
             {/* Botão de Painel Agroclimatológico & Solo */}
-            <button
-              type="button"
-              onClick={() => setIsAgroModalAberto(true)}
-              title="Abrir painel agroclimatológico: umidade do solo, irrigação e pulverização"
-              className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-black/20 hover:bg-black/30 backdrop-blur-md border border-white/25 text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm whitespace-nowrap"
-            >
-              <Sprout className="w-3.5 h-3.5 text-emerald-300" />
-              <span>Agro & Solo</span>
-            </button>
+            {(configVisualizacao?.mostrarAgro ?? true) && (
+              <button
+                type="button"
+                onClick={() => setIsAgroModalAberto(true)}
+                title="Abrir painel agroclimatológico: umidade do solo, irrigação e pulverização"
+                className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-black/20 hover:bg-black/30 backdrop-blur-md border border-white/25 text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm whitespace-nowrap"
+              >
+                <Sprout className="w-3.5 h-3.5 text-emerald-300" />
+                <span>Agro & Solo</span>
+              </button>
+            )}
 
             {/* Botão de Compartilhar Link & Baixar PNG */}
             <button
@@ -385,24 +368,6 @@ export function WeatherCard({
             >
               <Camera className="w-3.5 h-3.5 text-sky-300" />
               <span>Baixar / Compartilhar</span>
-            </button>
-
-            {/* Botão de Alertas e Notificações Diárias (08h e 20h) */}
-            <button
-              type="button"
-              onClick={() => setIsNotificationModalAberto(true)}
-              title="Configurar notificações diárias da previsão do tempo às 08h e 20h"
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md border text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm whitespace-nowrap ${
-                isNotificacaoAtiva
-                  ? "bg-emerald-500/30 border-emerald-400 text-emerald-200"
-                  : "bg-black/20 hover:bg-black/30 border-white/25"
-              }`}
-            >
-              <Bell className={`w-3.5 h-3.5 ${isNotificacaoAtiva ? "text-emerald-300 animate-pulse" : "text-amber-300"}`} />
-              <span>Alertas 08h / 20h</span>
-              {isNotificacaoAtiva && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              )}
             </button>
           </div>
         </div>
@@ -511,7 +476,7 @@ export function WeatherCard({
         </div>
 
         {/* ✨ Índices de Rotina Diária & Conforto (Zero Poluição - Abas Compactas) */}
-        {indicesRotina.length > 0 && (
+        {(configVisualizacao?.mostrarDicasRotina ?? true) && indicesRotina.length > 0 && (
           <div className="relative z-10 pt-4 mt-4 border-t border-white/20 space-y-3">
             {/* Header com Abas Compactas de Rotina */}
             <div className="flex items-center justify-between flex-wrap gap-2">
@@ -567,7 +532,7 @@ export function WeatherCard({
       </div>
 
       {/* ⏰ Previsão Hora a Hora (Próximas 24 horas) com Scroll Aprimorado */}
-      {data.previsaoHoraria && data.previsaoHoraria.length > 0 && (
+      {(configVisualizacao?.mostrarHoraAHora ?? true) && data.previsaoHoraria && data.previsaoHoraria.length > 0 && (
         <div
           style={cardStyle}
           className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6 border backdrop-blur-xl transition-all duration-300 space-y-4"
@@ -696,23 +661,25 @@ export function WeatherCard({
       )}
 
       {/* 📊 Gráfico Interativo de Curva Térmica e Chuva (24h) */}
-      {data.previsaoHoraria && data.previsaoHoraria.length > 0 && (
+      {(configVisualizacao?.mostrarGrafico24h ?? true) && data.previsaoHoraria && data.previsaoHoraria.length > 0 && (
         <WeatherChart dados={data.previsaoHoraria} />
       )}
 
       {/* 🛡️ Radar Ambiental & Defesa Civil (Consolidação de INMET, CEMADEN, Risco de Fogo e Ar/UV) */}
-      <EnvironmentalRadar
-        municipio={data.municipio}
-        uf={data.uf}
-        alertasINMET={data.alertasINMET}
-        alertasCEMADEN={data.alertasCEMADEN}
-        riscoFogo={data.riscoFogo}
-        qualidadeAr={data.qualidadeAr}
-        elNino={data.elNino}
-      />
+      {(configVisualizacao?.mostrarQualidadeArUV ?? true) && (
+        <EnvironmentalRadar
+          municipio={data.municipio}
+          uf={data.uf}
+          alertasINMET={data.alertasINMET}
+          alertasCEMADEN={data.alertasCEMADEN}
+          riscoFogo={data.riscoFogo}
+          qualidadeAr={data.qualidadeAr}
+          elNino={data.elNino}
+        />
+      )}
 
       {/* 📅 Previsão para os Próximos 7 Dias (Open-Meteo) */}
-      {data.previsaoDiaria && data.previsaoDiaria.length > 0 && (
+      {(configVisualizacao?.mostrarHoraAHora ?? true) && data.previsaoDiaria && data.previsaoDiaria.length > 0 && (
         <div
           style={cardStyle}
           className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6 border backdrop-blur-xl transition-all duration-300 space-y-4"
@@ -783,18 +750,23 @@ export function WeatherCard({
       )}
 
       {/* 🏛️ Sobre a Cidade (Abas Unificadas: Mapa Interativo, História Wikipedia, Notícias IBGE, Anúncios e Litoral) */}
-      <CityInsightsTabs
-        coordenadas={data.coordenadas}
-        municipio={data.municipio}
-        uf={data.uf}
-        temperatura={data.clima.temperature}
-        weatherCode={data.clima.weathercode}
-        wikipedia={data.wikipedia}
-        noticiasIBGE={data.noticiasIBGE}
-        favoritos={favoritos}
-        condicoesMarinhas={data.condicoesMarinhas}
-        onSelecionarCidade={onSelecionarCidade}
-      />
+      {(configVisualizacao?.mostrarInsightsTabs ?? true) && (
+        <CityInsightsTabs
+          coordenadas={data.coordenadas}
+          municipio={data.municipio}
+          uf={data.uf}
+          temperatura={data.clima.temperature}
+          weatherCode={data.clima.weathercode}
+          wikipedia={data.wikipedia}
+          noticiasIBGE={data.noticiasIBGE}
+          favoritos={favoritos}
+          condicoesMarinhas={data.condicoesMarinhas}
+          onSelecionarCidade={onSelecionarCidade}
+          mostrarRadar={configVisualizacao?.mostrarRadarChuva ?? true}
+          mostrarAnuncios={configVisualizacao?.mostrarAnunciosMock ?? true}
+          mostrarLitoral={configVisualizacao?.mostrarLitoral ?? true}
+        />
+      )}
 
       {/* 📸 Modal de Compartilhamento Social & WhatsApp */}
       <ShareModal
@@ -810,13 +782,7 @@ export function WeatherCard({
         onClose={() => setIsAgroModalAberto(false)}
       />
 
-      {/* 🔔 Modal de Alertas & Notificações Diárias (08h e 20h) */}
-      <NotificationModal
-        cidade={data}
-        isOpen={isNotificationModalAberto}
-        onClose={() => setIsNotificationModalAberto(false)}
-        onConfigChange={(ativa) => setIsNotificacaoAtiva(ativa)}
-      />
+
     </div>
   );
 }

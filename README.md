@@ -36,10 +36,11 @@ Toda e qualquer preferência do usuário é guardada estritamente no armazenamen
 
 | Dado Salvo | Local de Armazenamento | Finalidade |
 | :--- | :--- | :--- |
-| **Cidades Favoritas** | `localStorage` | Atalho rápido para municípios favoritados |
-| **Últimas 5 Cidades** | `localStorage` | Histórico recente para agilizar nova pesquisa |
-| **Tema Visual** | `localStorage` | Preservar preferência de tema (Claro / Escuro) |
-| **Alertas 08h e 20h** | `localStorage` | Preferência de horários e município (100% opt-in) |
+| **Cidades Favoritas** | `localStorage` (`climabr_cidades_favoritas`) | Atalho rápido para municípios favoritados |
+| **Últimas 5 Cidades** | `localStorage` (`climabr_cidades_recentes`) | Histórico recente para agilizar nova pesquisa |
+| **Tema Visual** | `localStorage` (`climabr_tema_preferido`) | Preservar preferência de tema (Claro / Escuro / Auto) |
+| **Alertas Customizados** | `localStorage` (`climabr_notificacoes_config`) | Alarmes programados com horários e tópicos independentes |
+| **Exibição Modular** | `localStorage` (`climabr_config_visualizacao`) | Preferências de ativação/desativação dos cards da tela |
 | **Cache de Previsão** | `sessionStorage` | Evitar requisições duplicadas (descartado ao fechar a aba) |
 
 > 💡 O usuário pode apagar 100% de seus dados a qualquer momento clicando em **"Privacidade & LGPD"** no rodapé do site e utilizando o botão **"Limpar Dados Locais"**.
@@ -49,11 +50,12 @@ Toda e qualquer preferência do usuário é guardada estritamente no armazenamen
 - **Máscara de Privacidade:** As coordenadas obtidas pelo navegador são arredondadas para 2 casas decimais (~1.1 km de raio). Isso impede que a rua ou residência exata do usuário sejam expostas a serviços de geocodificação.
 - **Descarte Imediato:** As coordenadas aproximadas são usadas unicamente na requisição pontual para descobrir o município correspondente e são descartadas da memória em seguida. Não há gravação de trajetos ou histórico de deslocamento.
 
-### 4. Notificações Meteorológicas Diárias sob a LGPD
+### 4. Sistema de Alertas & Notificações Customizáveis sob a LGPD
 - **Opt-in Expresso (Art. 7º, I da LGPD):** Nenhuma notificação é disparada sem o consentimento voluntário e explícito do usuário no navegador.
-- **Privacidade Preservada:** Não há coleta de e-mail, telefone, CPF ou login. As notificações operam de forma 100% anônima através da API de Service Worker local do navegador.
-- **Horários Fixos:** Exclusivamente nos horários escolhidos (**08:00** para previsão do dia e **20:00** para o resumo da noite), sem propagandas ou spam.
-- **Revogação Instantânea (Opt-out):** O usuário pode desligar as notificações a qualquer momento com um único clique.
+- **Privacidade Preservada:** Não há coleta de e-mail, telefone, CPF ou login. As notificações operam de forma 100% anônima através da API nativa do navegador e do Service Worker local.
+- **Controle Total por Alarme:** O usuário escolhe o horário exato e o tópico específico de cada alarme (Previsão do tempo, O que vestir/rotina, Alertas da Defesa Civil/INMET, Riscos/UV, Notícias locais, etc.).
+- **Tolerância e Zero Acúmulo Atrasado:** O sistema não acumula notificações velhas caso o dispositivo seja aberto fora do horário programado.
+- **Revogação Instantânea (Opt-out):** O usuário pode pausar, editar ou excluir qualquer alerta com um único clique na Central de Configurações.
 
 ### 5. Sanitização Ativa de Conteúdo Externo (Anti-XSS)
 - Notícias e conteúdos de terceiros (G1 Meio Ambiente, Agência Brasil/EBC, Wikipédia) passam por sanitização em rotas de API do servidor, removendo tags de script, iframes e atributos perigosos.
@@ -106,8 +108,14 @@ O ClimaBR integra um ecossistema de APIs públicas e abertas, sem necessidade de
 8. **PWA (Progressive Web App):**
    - Instalável em dispositivos móveis e desktop, com ícone adaptativo e carregamento offline-first.
 
-9. **Notificações Diárias Agendadas (08h e 20h):**
-   - Alertas meteorológicos pré-configurados (manhã e noite) com consentimento 100% voluntário (LGPD) e sem coleta de e-mail ou telefone.
+9. **Central de Configurações (⚙️):**
+   - **Dashboard Modular:** Liga ou desliga qualquer bloco da tela (curva térmica 24h, dicas de rotina, radar Doppler ao vivo, agroclimatologia, modo litoral, anúncios demonstrativos e avisos severos).
+   - **Seletor de Temas:** 5 opções dinâmicas (Automático solar, Claro, Escuro, Amanhecer e Anoitecer).
+   - **Gestão LGPD:** Reset de padrões e limpeza completa de dados locais em 1 clique.
+
+10. **Sistema de Alertas & Notificações Customizáveis:**
+    - O usuário cria alarmes com **horários livres** e **tópicos independentes por alarme** (ex: 07:30 para dicas de vestimenta, 12:00 para previsão do tempo, 18:00 para alertas da Defesa Civil).
+    - Monitoramento em tempo real a cada 10 segundos no navegador, com disparo pontual e botão para teste imediato de cada alarme.
 
 ---
 

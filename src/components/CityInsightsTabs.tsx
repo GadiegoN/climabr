@@ -43,6 +43,9 @@ interface CityInsightsTabsProps {
   favoritos?: CidadeHistorico[];
   condicoesMarinhas?: CondicoesMarinhas | null;
   onSelecionarCidade?: (id: string, nome: string, uf: string, coordenadas?: Coordenadas) => void;
+  mostrarRadar?: boolean;
+  mostrarAnuncios?: boolean;
+  mostrarLitoral?: boolean;
 }
 
 type TabTipo = "mapa" | "historia" | "noticias" | "anuncios" | "litoral";
@@ -62,12 +65,26 @@ export default function CityInsightsTabs({
   favoritos = [],
   condicoesMarinhas,
   onSelecionarCidade,
+  mostrarRadar = true,
+  mostrarAnuncios = true,
+  mostrarLitoral = true,
 }: CityInsightsTabsProps) {
-  const [tabAtiva, setTabAtiva] = useState<TabTipo>("mapa");
+  const [tabAtiva, setTabAtiva] = useState<TabTipo>(mostrarRadar ? "mapa" : "historia");
   const [filtroAnuncio, setFiltroAnuncio] = useState<FiltroAnuncio>("todos");
   const [filtroNoticia, setFiltroNoticia] = useState<FiltroNoticia>("todas");
   const [mounted, setMounted] = useState(false);
   const [isModalAnunciarAberto, setIsModalAnunciarAberto] = useState(false);
+
+  // Ajusta aba se a atual for desativada
+  useEffect(() => {
+    if (!mostrarRadar && tabAtiva === "mapa") {
+      setTabAtiva("historia");
+    } else if (!mostrarAnuncios && tabAtiva === "anuncios") {
+      setTabAtiva("noticias");
+    } else if (!mostrarLitoral && tabAtiva === "litoral") {
+      setTabAtiva("historia");
+    }
+  }, [mostrarRadar, mostrarAnuncios, mostrarLitoral, tabAtiva]);
   const [enviadoFeedback, setEnviadoFeedback] = useState(false);
 
   useEffect(() => {
@@ -96,18 +113,20 @@ export default function CityInsightsTabs({
 
         {/* Botões de Seleção de Abas em Linha com Scroll Horizontal Suave no Mobile */}
         <div className="flex items-center gap-1 sm:gap-2 bg-black/10 dark:bg-white/5 p-1 rounded-2xl overflow-x-auto max-w-full custom-scrollbar flex-nowrap shrink-0">
-          <button
-            type="button"
-            onClick={() => setTabAtiva("mapa")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 whitespace-nowrap ${
-              tabAtiva === "mapa"
-                ? "bg-sky-500 text-white shadow-md shadow-sky-500/20"
-                : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
-            }`}
-          >
-            <Map className="w-3.5 h-3.5" />
-            <span>Mapa</span>
-          </button>
+          {mostrarRadar && (
+            <button
+              type="button"
+              onClick={() => setTabAtiva("mapa")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                tabAtiva === "mapa"
+                  ? "bg-sky-500 text-white shadow-md shadow-sky-500/20"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+              }`}
+            >
+              <Map className="w-3.5 h-3.5" />
+              <span>Mapa</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -141,21 +160,23 @@ export default function CityInsightsTabs({
           </button>
 
           {/* 📢 Aba de Anúncios & Publicidade */}
-          <button
-            type="button"
-            onClick={() => setTabAtiva("anuncios")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 whitespace-nowrap ${
-              tabAtiva === "anuncios"
-                ? "bg-sky-500 text-white shadow-md shadow-sky-500/20"
-                : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
-            }`}
-          >
-            <Megaphone className="w-3.5 h-3.5" />
-            <span>Anúncios</span>
-          </button>
+          {mostrarAnuncios && (
+            <button
+              type="button"
+              onClick={() => setTabAtiva("anuncios")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                tabAtiva === "anuncios"
+                  ? "bg-sky-500 text-white shadow-md shadow-sky-500/20"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+              }`}
+            >
+              <Megaphone className="w-3.5 h-3.5" />
+              <span>Anúncios</span>
+            </button>
+          )}
 
           {/* 🌊 Aba Condicional: Litoral & Marés (Apenas para Cidades Costeiras) */}
-          {condicoesMarinhas && (
+          {mostrarLitoral && condicoesMarinhas && (
             <button
               type="button"
               onClick={() => setTabAtiva("litoral")}

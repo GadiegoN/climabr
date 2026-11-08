@@ -32,9 +32,14 @@ import { WeatherSkeleton } from "@/components/WeatherSkeleton";
 import { WeatherEffects } from "@/components/WeatherEffects";
 import { CityComparisonModal } from "@/components/CityComparisonModal";
 import { TimeCapsuleModal } from "@/components/TimeCapsuleModal";
+import { SettingsModal } from "@/components/SettingsModal";
+import { PrivacyModal } from "@/components/PrivacyModal";
 import { Footer } from "@/components/Footer";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
-import { CloudSunRain, AlertCircle, Info, Sparkles } from "lucide-react";
+import { ConfiguracoesVisualizacao } from "@/types/settings";
+import { getConfiguracoesVisualizacao } from "@/utils/userSettings";
+import { registrarServiceWorker, checarEAgendarAlertas } from "@/utils/notifications";
+import { CloudSunRain, AlertCircle, Info, Sparkles, Settings } from "lucide-react";
 
 const HISTORICO_LOCALSTORAGE_KEY = "climabr_cidades_recentes";
 const FAVORITOS_LOCALSTORAGE_KEY = "climabr_cidades_favoritas";
@@ -69,6 +74,11 @@ function WeatherAppContent() {
   const [isComparadorAberto, setIsComparadorAberto] = useState<boolean>(false);
   // Modal de Cápsula do Tempo
   const [isCapsulaAberta, setIsCapsulaAberta] = useState<boolean>(false);
+  // Central de Configurações
+  const [isSettingsModalAberto, setIsSettingsModalAberto] = useState<boolean>(false);
+  const [isPrivacyModalAberto, setIsPrivacyModalAberto] = useState<boolean>(false);
+  // Preferências de exibição modular dos cards
+  const [configVisualizacao, setConfigVisualizacao] = useState<ConfiguracoesVisualizacao>(() => getConfiguracoesVisualizacao());
 
   // Estado do resultado do clima
   const [dadosClima, setDadosClima] = useState<DadosClimaCidade | null>(null);
@@ -83,6 +93,18 @@ function WeatherAppContent() {
       document.body.setAttribute("data-theme", temaEfetivo);
     }
   }, [temaEfetivo]);
+
+  // Monitoramento contínuo de alarmes agendados em segundo plano (roda a cada 10 segundos)
+  useEffect(() => {
+    registrarServiceWorker();
+    checarEAgendarAlertas();
+
+    const timer = setInterval(() => {
+      checarEAgendarAlertas();
+    }, 10000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Troca e persistência do tema
   const handleTemaChange = (novoTema: TipoTema) => {
@@ -495,8 +517,24 @@ function WeatherAppContent() {
       />
 
       <div className="relative z-10 max-w-4xl w-full mx-auto space-y-6 sm:space-y-8">
-        {/* Barra Superior: Seletor de Temas */}
-        <div className="flex justify-end pt-1 sm:pt-2">
+        {/* Barra Superior: Central de Configurações & Seletor de Temas */}
+        <div className="flex items-center justify-end gap-2 pt-1 sm:pt-2">
+          {/* Botão de Configurações (⚙️) */}
+          <button
+            type="button"
+            onClick={() => setIsSettingsModalAberto(true)}
+            title="Abrir Central de Configurações: personalizar cards, notificações e temas"
+            style={{
+              backgroundColor: "var(--card-bg)",
+              borderColor: "var(--card-border)",
+              color: "var(--text-main)",
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold border backdrop-blur-md shadow-sm hover:opacity-90 active:scale-95 transition-all cursor-pointer group"
+          >
+            <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 transition-transform duration-500 group-hover:rotate-90" />
+            <span className="hidden xs:inline">Configurações</span>
+          </button>
+
           <ThemeSelector
             temaSelecionado={tema}
             temaEfetivo={temaEfetivo}
@@ -580,6 +618,7 @@ function WeatherAppContent() {
               data={dadosClima}
               isFavorito={favoritos.some((f) => f.municipioId === dadosClima.municipioId)}
               favoritos={favoritos}
+              configVisualizacao={configVisualizacao}
               onToggleFavorito={handleToggleFavorito}
               onSelecionarCidade={(id, nome, uf, coords) => {
                 setEstadoSelecionado(uf);
@@ -631,6 +670,25 @@ function WeatherAppContent() {
           onClose={() => setIsCapsulaAberta(false)}
         />
       )}
+
+      {/* Central de Configurações (⚙️) */}
+      <SettingsModal
+        isOpen={isSettingsModalAberto}
+        onClose={() => setIsSettingsModalAberto(false)}
+        cidadeAtual={dadosClima}
+        temaAtual={tema}
+        temaEfetivo={temaEfetivo}
+        onTemaChange={handleTemaChange}
+        configVisualizacao={configVisualizacao}
+        onVisualizacaoChange={(novaConfig) => setConfigVisualizacao(novaConfig)}
+        onAbrirPrivacidade={() => setIsPrivacyModalAberto(true)}
+      />
+
+      {/* Modal de Privacidade & LGPD */}
+      <PrivacyModal
+        isOpen={isPrivacyModalAberto}
+        onClose={() => setIsPrivacyModalAberto(false)}
+      />
 
       {/* Prompt / Banner de Instalação PWA */}
       <PWAInstallPrompt />

@@ -31,8 +31,25 @@ export async function GET() {
       const imgMatch = block.match(/url=["'](https:\/\/[^"']+\.(?:jpg|jpeg|png|webp)[^"']*)["']/i);
 
       if (titleMatch && linkMatch) {
+        const rawLink = linkMatch[1].trim();
+        // Validação de segurança: apenas links HTTPS válidos
+        if (!/^https:\/\/[a-zA-Z0-9-._~:/?#[\]@!$&'()*+,;=]+$/.test(rawLink)) {
+          continue;
+        }
+
+        const sanitizeText = (txt: string) =>
+          txt
+            .replace(/<[^>]+>/g, "")
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&amp;/g, "&")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .trim();
+
         const rawDesc = subtitleMatch ? subtitleMatch[1] : "";
-        const cleanDesc = rawDesc.replace(/<[^>]+>/g, "").trim();
+        const cleanDesc = sanitizeText(rawDesc);
+        const cleanTitle = sanitizeText(titleMatch[1]);
 
         let dataFormatada = "";
         if (dateMatch) {
@@ -50,16 +67,18 @@ export async function GET() {
           }
         }
 
+        const safeImg = imgMatch && /^https:\/\//i.test(imgMatch[1]) ? imgMatch[1] : undefined;
+
         items.push({
           id: `g1-${idx++}`,
-          titulo: titleMatch[1].trim(),
+          titulo: cleanTitle,
           introducao: cleanDesc.slice(0, 220) + (cleanDesc.length > 220 ? "..." : ""),
           data_publicacao: dataFormatada,
-          link: linkMatch[1].trim(),
+          link: rawLink,
           fonte: "clima",
           fonteNome: "G1 Meio Ambiente & Clima",
           categoria: "clima",
-          imagemUrl: imgMatch ? imgMatch[1] : undefined,
+          imagemUrl: safeImg,
         });
       }
     }

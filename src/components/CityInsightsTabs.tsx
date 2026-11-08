@@ -49,6 +49,8 @@ type TabTipo = "mapa" | "historia" | "noticias" | "anuncios" | "litoral";
 type FiltroAnuncio = "todos" | "nacional" | "estadual" | "local" | "frio" | "calor";
 type FiltroNoticia = "todas" | "ibge" | "ebc" | "clima" | "regional";
 
+const isSafeUrl = (url?: string): boolean => Boolean(url && /^https?:\/\//i.test(url.trim()));
+
 export default function CityInsightsTabs({
   coordenadas,
   municipio,
@@ -225,7 +227,7 @@ export default function CityInsightsTabs({
                     {wikipedia.extrato}
                   </p>
 
-                  {wikipedia.paginaUrl && (
+                  {isSafeUrl(wikipedia.paginaUrl) && (
                     <a
                       href={wikipedia.paginaUrl}
                       target="_blank"
@@ -363,11 +365,12 @@ export default function CityInsightsTabs({
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
                   {noticiasFiltradas.map((item) => {
                     const badge = getBadgeFonte(item.fonte);
+                    const safeHref = isSafeUrl(item.link) ? item.link : "#";
 
                     return (
                       <a
                         key={item.id}
-                        href={item.link}
+                        href={safeHref}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/[0.03] hover:bg-black/10 dark:hover:bg-white/[0.07] border border-[var(--card-border)] transition-all flex flex-col justify-between group shadow-sm hover:-translate-y-0.5"

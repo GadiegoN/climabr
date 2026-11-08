@@ -488,6 +488,9 @@ export async function getNoticiasIBGE(uf?: string, municipioNome?: string): Prom
             const imgMatch = block.match(/<imagem-destaque>([\s\S]*?)<\/imagem-destaque>/);
 
             if (titleMatch && linkMatch) {
+              const rawLink = linkMatch[1].trim();
+              if (!/^https?:\/\//i.test(rawLink)) continue;
+
               const rawDesc = descMatch ? descMatch[1] : "";
               const cleanDesc = rawDesc
                 .replace(/&lt;.*?&gt;/g, "")
@@ -512,16 +515,18 @@ export async function getNoticiasIBGE(uf?: string, municipioNome?: string): Prom
                 }
               }
 
+              const safeImg = imgMatch && /^https?:\/\//i.test(imgMatch[1].trim()) ? imgMatch[1].trim() : undefined;
+
               items.push({
                 id: `ebc-${idx++}`,
-                titulo: titleMatch[1].trim(),
+                titulo: titleMatch[1].replace(/<[^>]+>/g, "").trim(),
                 introducao: cleanDesc.slice(0, 220) + (cleanDesc.length > 220 ? "..." : ""),
                 data_publicacao: dataFormatada,
-                link: linkMatch[1].trim(),
+                link: rawLink,
                 fonte: "ebc" as const,
                 fonteNome: "Agência Brasil",
                 categoria: "ebc" as const,
-                imagemUrl: imgMatch ? imgMatch[1].trim() : undefined,
+                imagemUrl: safeImg,
               });
             }
           }
@@ -842,25 +847,34 @@ export function calcularRiscoFogo(
 
 /**
  * 9. Geocodificação reversa a partir de Latitude e Longitude (GPS do navegador).
- * Identifica o nome da cidade e UF correspondentes.
- * Cache: 1 hora por ponto geográfico.
+ * PRIVACIDADE E SEGURANÇA:
+ * - As coordenadas recebidas do GPS são arredondadas para 2 casas decimais (~1.1 km de precisão).
+ * - Isso impede que a rua ou endereço residencial exato do usuário seja exposto a serviços de terceiros,
+ *   garantindo anonimização suficiente para detecção precisa do município conforme a LGPD.
+ * - Cache: 1 hora por coordenada aproximada.
  */
 export async function reverseGeocodeGPS(
   latitude: number,
   longitude: number
 ): Promise<{ cidade: string; uf: string } | null> {
   try {
-    const cacheKey = `gps_rev_${latitude.toFixed(3)}_${longitude.toFixed(3)}`;
+    // Anonimização de coordenadas para preservação de privacidade (~1.1 km de precisão)
+    const latAprox = Number(latitude.toFixed(2));
+    const lonAprox = Number(longitude.toFixed(2));
+
+    const cacheKey = `gps_rev_${latAprox}_${lonAprox}`;
     const emCache = getCached<{ cidade: string; uf: string }>(cacheKey, 3600000);
     if (emCache) return emCache;
 
-    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=pt`;
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latAprox}&longitude=${lonAprox}&localityLanguage=pt`;
     const response = await fetch(url);
     if (!response.ok) return null;
 
     const data = await response.json();
-    const uf = data.principalSubdivisionCode?.replace("BR-", "") || "SP";
-    const cidade = data.city || data.locality || data.principalSubdivision || "Localização Atual";
+    const uf = data.principalSubdivisionCode?.replace("BR-", "")?.slice(0, 2)?.toUpperCase() || "SP";
+    const cidade = (data.city || data.locality || data.principalSubdivision || "Localização Atual")
+      .replace(/[<>{}]/g, "")
+      .trim();
 
     const resultado = { cidade, uf };
     setCached(cacheKey, resultado);

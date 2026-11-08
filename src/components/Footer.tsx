@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   CloudSunRain,
   ShieldCheck,
@@ -14,10 +14,13 @@ import {
   Heart,
   Globe,
   Info,
+  Lock,
 } from "lucide-react";
+import { PrivacyModal } from "./PrivacyModal";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
 
   const cardStyle = {
     borderColor: "var(--card-border)",
@@ -54,7 +57,7 @@ export function Footer() {
               Plataforma nacional de inteligência meteorológica, monitoramento de riscos ambientais e dados geoestatísticos para os <strong>5.570 municípios</strong> do Brasil.
             </p>
 
-            {/* Selo de Status das APIs Operacionais */}
+            {/* Selo de Status das APIs Operacionais & Link de Governança */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 font-bold text-[11px]">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -65,6 +68,15 @@ export function Footer() {
                 <MapPin className="w-3.5 h-3.5 text-sky-400" />
                 <span>5.570 Cidades Cobertas</span>
               </div>
+
+              <button
+                type="button"
+                onClick={() => setPrivacyModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/5 dark:bg-white/5 hover:bg-emerald-500/10 border border-[var(--card-border)] hover:border-emerald-500/30 text-[var(--text-muted)] hover:text-emerald-500 text-[11px] font-semibold transition-all cursor-pointer"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                <span>Privacidade & LGPD</span>
+              </button>
             </div>
           </div>
 
@@ -146,9 +158,29 @@ export function Footer() {
 
         {/* Bloco 3: Linha de Copyright & Rodapé Final */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[var(--card-border)] text-[11px] text-[var(--text-muted)] text-center sm:text-left">
-          <p>
-            &copy; {currentYear} <strong>ClimaBR</strong> • Todos os direitos reservados.
-          </p>
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3">
+            <span>&copy; {currentYear} <strong>ClimaBR</strong></span>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => setPrivacyModalOpen(true)}
+              className="hover:text-emerald-500 transition-colors cursor-pointer underline underline-offset-2 decoration-[var(--card-border)] hover:decoration-emerald-500 inline-flex items-center gap-1 font-medium"
+            >
+              <ShieldCheck className="w-3 h-3 text-emerald-500" />
+              <span>Privacidade & Dados</span>
+            </button>
+            <span>•</span>
+            <a
+              href="https://github.com/GadiegoN/climabr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-sky-400 transition-colors inline-flex items-center gap-1 underline underline-offset-2 decoration-[var(--card-border)] hover:decoration-sky-400 font-medium"
+            >
+              <span>Código Aberto</span>
+              <ExternalLink className="w-2.5 h-2.5 text-[var(--text-muted)]" />
+            </a>
+          </div>
+
           <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-3">
             <span>Desenvolvido no Brasil 🇧🇷</span>
             <span>•</span>
@@ -167,6 +199,12 @@ export function Footer() {
           </div>
         </div>
       </div>
+
+      {/* Modal Interativo de Governança e Privacidade LGPD */}
+      <PrivacyModal
+        isOpen={privacyModalOpen}
+        onClose={() => setPrivacyModalOpen(false)}
+      />
     </footer>
   );
 }

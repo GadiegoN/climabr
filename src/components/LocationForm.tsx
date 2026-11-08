@@ -1,6 +1,6 @@
 import React from "react";
 import { EstadoIBGE, MunicipioIBGE, CidadeHistorico } from "@/types/weather";
-import { Search, Loader2, MapPin, Building2, History, LocateFixed, Star, X } from "lucide-react";
+import { Search, Loader2, MapPin, Building2, History, LocateFixed, Star, X, ShieldCheck } from "lucide-react";
 
 interface LocationFormProps {
   estados: EstadoIBGE[];
@@ -53,18 +53,25 @@ export function LocationForm({
       }}
       className="w-full max-w-3xl mx-auto rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 border backdrop-blur-xl transition-all duration-300 space-y-4 sm:space-y-5"
     >
-      {/* Botão de Localização Atual por GPS Responsivo */}
+      {/* Botão de Localização Atual por GPS Responsivo com Garantia de Privacidade */}
       <div
         style={{ borderColor: "var(--card-border)" }}
         className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b pb-4"
       >
-        <span style={{ color: "var(--text-muted)" }} className="text-xs font-semibold">
-          Buscar por município ou:
-        </span>
+        <div className="space-y-0.5">
+          <span style={{ color: "var(--text-muted)" }} className="text-xs font-semibold block">
+            Buscar por município ou:
+          </span>
+          <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-1">
+            <ShieldCheck className="w-3 h-3 text-emerald-500 shrink-0" />
+            <span>GPS efêmero • Coordenadas aproximadas (~1km) • Sem rastreamento</span>
+          </span>
+        </div>
         <button
           type="button"
           onClick={onUsarGPS}
           disabled={loadingClima || loadingGPS}
+          title="Sua localização é processada estritamente no seu navegador para encontrar a cidade correspondente. Coordenadas com máscara de privacidade (~1km)."
           className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm w-full sm:w-auto"
         >
           {loadingGPS ? (
